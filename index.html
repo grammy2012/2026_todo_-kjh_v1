@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quantitative WBS Dashboard V3.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { background-color: #f8fafc; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .progress-bar { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .toggle-checkbox:checked { right: 0; border-color: #3b82f6; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
+        .toggle-checkbox:checked + .toggle-label:before { transform: translateX(100%); }
+        .no-select { user-select: none; -webkit-user-select: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .num-highlight { font-weight: 900; color: #2563eb; background: #eff6ff; padding: 0 4px; border-radius: 4px; }
+    </style>
+</head>
+<body class="text-slate-800 pb-24">
+
+    <!-- 🌟 상단 고정 헤더 -->
+    <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 py-3 md:px-6 mb-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex justify-between items-center w-full md:w-auto">
+                <h1 class="text-lg md:text-xl font-black text-slate-800 tracking-tight flex items-center">
+                    <i class="fa-solid fa-chart-column text-blue-600 mr-2"></i>정량화 마스터 WBS
+                </h1>
+                <button onclick="setGoogleUrl()" class="md:hidden text-slate-400 hover:text-blue-600 px-2 py-1 bg-slate-100 rounded-lg"><i class="fa-solid fa-gear"></i></button>
+            </div>
+            
+            <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto hide-scrollbar justify-between md:justify-end">
+                <div class="flex items-center bg-slate-100 rounded-lg px-2 py-1.5 border border-slate-200 shrink-0 cursor-pointer" onclick="document.getElementById('hide-toggle').click()">
+                    <span class="text-[12px] font-bold text-slate-600 mr-2"><i class="fa-solid fa-eye-slash mr-1"></i>100% 완료 숨기기</span>
+                    <div class="relative inline-block w-10 align-middle select-none pointer-events-none">
+                        <input type="checkbox" id="hide-toggle" onchange="toggleHide()" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none z-10 transition-transform duration-200"/>
+                        <label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 transition-colors duration-200"></label>
+                    </div>
+                </div>
+                
+                <div class="flex gap-1.5 shrink-0">
+                    <button onclick="syncToCloud()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[12px] font-bold shadow-sm active:scale-95 transition flex items-center">
+                        <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> 시트 저장
+                    </button>
+                    <button onclick="loadFromCloud()" class="bg-white text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg text-[12px] font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition flex items-center">
+                        <i class="fa-solid fa-cloud-arrow-down mr-1.5"></i> 불러오기
+                    </button>
+                    <button onclick="setGoogleUrl()" class="hidden md:block text-slate-400 hover:text-blue-600 px-2 bg-slate-100 rounded-lg" title="구글 앱스 스크립트 주소 연동"><i class="fa-solid fa-gear"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 md:px-6">
+        <!-- 🌟 총괄 정량 달성률 바 -->
+        <div class="w-full bg-slate-900 p-5 md:p-6 rounded-2xl shadow-xl mb-8 text-white flex flex-col justify-center border-b-4 border-emerald-500">
+            <div class="flex justify-between items-end mb-3">
+                <div>
+                    <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Quantitative Progress</span>
+                    <span class="text-4xl font-black text-emerald-400" id="total-progress-text">0%</span>
+                </div>
+                <div class="text-right">
+                    <span class="block text-xs font-bold text-slate-400 mb-1">총 달성 퀘스트 수치</span>
+                    <span class="text-lg font-bold text-white bg-slate-800 px-3 py-1 rounded-lg border border-slate-700" id="total-count-text">0 / 0</span>
+                </div>
+            </div>
+            <div class="w-full bg-slate-700 rounded-full h-2.5 shadow-inner">
+                <div id="total-progress" class="bg-emerald-400 h-2.5 rounded-full progress-bar shadow-[0_0_10px_rgba(52,211,153,0.4)]" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="dashboard-container"></div>
+    </div>
+
+    <!-- 플로팅 토스트 알림창 -->
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-800/95 backdrop-blur-sm text-white px-5 py-3 rounded-full text-[14px] font-bold shadow-2xl opacity-0 transition-opacity pointer-events-none z-50 flex items-center gap-2 whitespace-nowrap border border-slate-600"></div>
+
+    <script>
+        // 🎯 극한으로 쪼갠 정량 지표 데이터베이스 (current, target, unit 완벽 세팅)
+        const initialData = [
+            {
+                title: '🎓 C1. 커리어 & 학위', color: 'blue', icon: 'fa-user-graduate',
+                tasks: [
+                    { title: '학점은행제 행정 퀘스트 (102학점)', kpis: [
+                        { text: '오산대 통화 및 제적/성적증명서 PDF 발급', current: 0, target: 2, unit: '건', priority: 'Urgent' },
+                        { text: '학은제 4년제 학사 전공 변경 등록', current: 0, target: 1, unit: '건', priority: 'High' },
+                        { text: '대기 중인 36학점 수수료 36000원 결제', current: 0, target: 1, unit: '건', priority: 'High' },
+                        { text: '잔여 학점 통합하여 102학점 서류 등록', current: 0, target: 1, unit: '건', priority: 'High' }
+                    ]},
+                    { title: 'PM 이직 파이프라인 구축', kpis: [
+                        { text: '링크드인 이력서 핵심 성과 업데이트', current: 0, target: 3, unit: '문장', priority: 'Medium' },
+                        { text: '육아휴직 1년 보장 공공/산단 타겟 공고 스크랩', current: 0, target: 5, unit: '곳', priority: 'High' },
+                        { text: '타겟 공공기관에 이력서 및 포트폴리오 제출', current: 0, target: 2, unit: '곳', priority: 'High' }
+                    ]}
+                ]
+            },
+            {
+                title: '📉 C2. 리스크 헷징 & 재무', color: 'emerald', icon: 'fa-chart-pie',
+                tasks: [
+                    { title: 'KOSPI 인버스 기계적 매도 룰', kpis: [
+                        { text: 'KOSPI 7150선 도달 시 1765원 물량 전량 매도', current: 0, target: 1, unit: '회', priority: 'Urgent' },
+                        { text: 'KOSPI 6800선 단기 하락 시 분할 매도', current: 0, target: 2, unit: '회', priority: 'High' },
+                        { text: '방향성 횡보 시 롤오버 방어용 수요일 분할 매도', current: 0, target: 1, unit: '회', priority: 'Medium' }
+                    ]},
+                    { title: '현금흐름 및 자산 설계도', kpis: [
+                        { text: '전월 지출 112만 원 엑셀 항목별 복기', current: 0, target: 1, unit: '건', priority: 'High' },
+                        { text: '차월 타이트한 예산안(90만 원) 엑셀 작성', current: 0, target: 1, unit: '건', priority: 'Medium' },
+                        { text: '차량/주택/주식 자산 배분 비중 파이차트화', current: 0, target: 1, unit: '건', priority: 'Medium' },
+                        { text: '마이크로 인컴(아주 작은 수입) 창출 가설 테스트', current: 0, target: 1, unit: '회', priority: 'Low' }
+                    ]}
+                ]
+            },
+            {
+                title: '🚀 C3. 앱 개발 & 비즈니스 (P1/P2)', color: 'indigo', icon: 'fa-cubes',
+                tasks: [
+                    { title: 'P2: 앱 서비스 기획 & 산출물', kpis: [
+                        { text: '일기 앱 4사분면 기반 오디오 스템 제작', current: 0, target: 80, unit: '개', priority: 'Urgent' },
+                        { text: '오디오 크로스페이드 믹싱 로직 다이어그램', current: 0, target: 1, unit: '건', priority: 'High' },
+                        { text: '일기 앱 지인 대상 TestFlight 베타 배포', current: 0, target: 3, unit: '명', priority: 'High' },
+                        { text: '시니어 케어/목표 달성/소비자 앱 기획안', current: 0, target: 3, unit: '건', priority: 'Low' }
+                    ]},
+                    { title: 'P1: AI 과업 생태계 조성', kpis: [
+                        { text: '위키하우 형태 AI 업무 스탠다드 와이어프레임', current: 0, target: 5, unit: '장', priority: 'High' },
+                        { text: '국가 차원 AI 활용 연구 프롬프트 문서화', current: 0, target: 1, unit: '건', priority: 'Medium' },
+                        { text: 'AI 도서 샘플 강의안 작성', current: 0, target: 3, unit: '건', priority: 'Low' },
+                        { text: 'AI 특허 아이디어 선행기술조사 검색', current: 0, target: 3, unit: '회', priority: 'Low' }
+                    ]}
+                ]
+            },
+            {
+                title: '🎨 C4. 아트 & 브랜딩 (P3)', color: 'purple', icon: 'fa-palette',
+                tasks: [
+                    { title: 'P3: 음악 프로듀싱 파이프라인', kpis: [
+                        { text: '개인 앨범 "피네" 마스터링 WAV 파일 추출', current: 0, target: 1, unit: '곡', priority: 'High' },
+                        { text: '비비아나킴 "메르헨" 앨범 방향성 피드백 전송', current: 0, target: 1, unit: '건', priority: 'Medium' },
+                        { text: '윤경님 AI 뮤직다이어리 넥스트 스텝 노션 정리', current: 0, target: 1, unit: '건', priority: 'Medium' },
+                        { text: 'ASMR / 수면 음악 유튜브 1시간 오디오 업로드', current: 0, target: 2, unit: '건', priority: 'Low' },
+                        { text: '가요 음악 제작 및 프로듀싱 레슨 수강', current: 0, target: 4, unit: '회', priority: 'Low' }
+                    ]},
+                    { title: '퍼스널 브랜딩 (3D & 마케팅)', kpis: [
+                        { text: 'Upwork/Fiverr 등 글로벌 3D 플랫폼 포트폴리오 업로드', current: 0, target: 3, unit: '곳', priority: 'High' },
+                        { text: '고객이 나를 선택할 Selling Point 카피 작성', current: 0, target: 3, unit: '건', priority: 'High' },
+                        { text: '"제 4의 벽을 깨는 아티스트" 슬로건 프로필 적용', current: 0, target: 1, unit: '건', priority: 'Medium' },
+                        { text: '데이트 쇼핑몰/AI 카피 스터디 인스타 피드 업로드', current: 0, target: 2, unit: '건', priority: 'Medium' }
+                    ]}
+                ]
+            },
+            {
+                title: '❤️ C5. 미국 일정 & 샘(Sam)', color: 'rose', icon: 'fa-plane-departure',
+                tasks: [
+                    { title: '이벤트 D-Day 퀘스트', kpis: [
+                        { text: '10/29 생일: 노원 스시 예약 및 에어팟 픽업', current: 0, target: 2, unit: '건', priority: 'Urgent' },
+                        { text: '1주년 기념: 타임머신 동선 공유 및 맞춤 꽃 픽업', current: 0, target: 2, unit: '건', priority: 'Urgent' },
+                        { text: '미국 부모님 앰배서더 콤보(백세고/황진단 등) 결제', current: 0, target: 4, unit: '건', priority: 'High' },
+                        { text: '12/24 시카고 9인 외식 OpenTable 앱 예약', current: 0, target: 1, unit: '건', priority: 'High' },
+                        { text: '샤브샤브용 H마트 장보기/부르스타 쇼핑 리스트 메모', current: 0, target: 1, unit: '건', priority: 'Medium' }
+                    ]},
+                    { title: '관계 및 피지컬 루틴', kpis: [
+                        { text: '이번 주/다음 주 2주간 사용할 데이트 예산 계산', current: 0, target: 1, unit: '건', priority: 'High' },
+                        { text: '미국 체류 14일 샘과 유지할 루틴 타임블록 작성', current: 0, target: 1, unit: '장', priority: 'Medium' },
+                        { text: '버스 등 대중교통 자투리 시간 활용 틈틈이 운동 달성', current: 0, target: 3, unit: '회', priority: 'Low' }
+                    ]}
+                ]
+            }
+        ];
+
+        let appData = JSON.parse(localStorage.getItem('myPmoDataV3')) || initialData;
+        let isHideCompleted = false;
+
+        // 고유 ID 주입 및 데이터 구조 체크
+        appData.forEach(c => c.tasks.forEach(t => t.kpis.forEach(k => { 
+            if(!k.id) k.id = 'kpi_' + Math.random().toString(36).substr(2,9);
+            if(k.current === undefined) k.current = 0;
+            if(k.target === undefined) k.target = 1;
+        })));
+
+        function showToast(msg, icon = 'fa-circle-info') {
+            const t = document.getElementById('toast');
+            t.innerHTML = `<i class="fa-solid ${icon} text-blue-400"></i> ${msg}`;
+            t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 2500);
+        }
+
+        // 구글 스크립트 설정
+        function setGoogleUrl() {
+            const currentUrl = localStorage.getItem('googleSheetApiUrl') || '';
+            const newUrl = prompt('구글 Apps Script 웹앱 URL을 붙여넣으세요:\n(이 주소를 넣으면 시트와 데이터가 연동됩니다)', currentUrl);
+            if(newUrl !== null) { 
+                localStorage.setItem('googleSheetApiUrl', newUrl.trim()); 
+                showToast('URL 연동 완료! 시트 저장/불러오기가 가능합니다.', 'fa-link'); 
+            }
+        }
+
+        async function syncToCloud() {
+            const url = localStorage.getItem('googleSheetApiUrl');
+            if(!url) return setGoogleUrl();
+            showToast('스프레드시트에 표를 업데이트 중...', 'fa-spinner fa-spin');
+            try { 
+                await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(appData) }); 
+                showToast('구글 시트 저장 완료! 문서를 확인해보세요.', 'fa-check'); 
+            } 
+            catch(e) { showToast('네트워크 오류로 저장에 실패했습니다.', 'fa-xmark'); }
+        }
+
+        async function loadFromCloud() {
+            const url = localStorage.getItem('googleSheetApiUrl');
+            if(!url) return setGoogleUrl();
+            showToast('데이터 불러오는 중...', 'fa-spinner fa-spin');
+            try { 
+                const res = await fetch(url); const data = await res.json();
+                if(data && data.length > 0) { 
+                    appData = data; localStorage.setItem('myPmoDataV3', JSON.stringify(appData)); render(); 
+                    showToast('시트에서 성공적으로 불러왔습니다.', 'fa-cloud-arrow-down'); 
+                }
+            } catch(e) { showToast('불러오기 실패. URL을 확인하세요.', 'fa-xmark'); }
+        }
+
+        function toggleHide() { 
+            isHideCompleted = document.getElementById('hide-toggle').checked; 
+            render(); 
+        }
+
+        // 🟢 정량 수치 업데이트 기능
+        function updateKpi(cIdx, tIdx, kIdx, amount) {
+            let kpi = appData[cIdx].tasks[tIdx].kpis[kIdx];
+            kpi.current = Math.max(0, Math.min(kpi.target, kpi.current + amount));
+            localStorage.setItem('myPmoDataV3', JSON.stringify(appData));
+            render();
+        }
+
+        function getPriorityBadge(p) {
+            const badges = {
+                'Urgent': '<span class="text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm shrink-0 mt-0.5">🔥긴급</span>',
+                'High': '<span class="text-orange-700 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm shrink-0 mt-0.5">⚡높음</span>',
+                'Medium': '<span class="text-green-700 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm shrink-0 mt-0.5">🌱보통</span>',
+                'Low': '<span class="text-slate-500 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm shrink-0 mt-0.5">💡여유</span>'
+            };
+            return badges[p] || badges['Low'];
+        }
+
+        // 숫자가 포함된 텍스트 자동 하이라이트
+        function formatText(text) {
+            return text.replace(/([0-9,]+(?:건|개|명|장|회|%|곳|종|원|학점|시간|일|문장|부|곡)?)/g, '<span class="num-highlight">$1</span>');
+        }
+
+        function render() {
+            const grid = document.getElementById('dashboard-container');
+            grid.innerHTML = '';
+            let totalCurrent = 0, totalTarget = 0;
+
+            appData.forEach((cat, cIdx) => {
+                let catCurrent = 0, catTarget = 0;
+                let tasksHtml = '';
+                let hasVisibleTask = false;
+
+                cat.tasks.forEach((task, tIdx) => {
+                    let kpisHtml = '';
+                    let visibleCount = 0;
+
+                    task.kpis.forEach((kpi, kIdx) => {
+                        catTarget += kpi.target; totalTarget += kpi.target;
+                        catCurrent += kpi.current; totalCurrent += kpi.current;
+                        
+                        let isDone = kpi.current >= kpi.target;
+                        if(isHideCompleted && isDone) return;
+                        visibleCount++;
+
+                        // 🎯 UI 분기: 목표가 1개면 '체크버튼', 2개 이상이면 '+/- 증감 버튼'
+                        let controlHtml = '';
+                        if(kpi.target === 1) {
+                            controlHtml = `
+                                <div class="w-[26px] h-[26px] rounded flex items-center justify-center cursor-pointer transition-colors shadow-sm border-2 ${isDone ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-300 hover:border-blue-400'}" onclick="updateKpi(${cIdx}, ${tIdx}, ${kIdx}, ${isDone ? -1 : 1})">
+                                    <i class="fa-solid fa-check text-white text-[13px] ${isDone ? 'block' : 'hidden'}"></i>
+                                </div>`;
+                        } else {
+                            controlHtml = `
+                                <div class="flex items-center gap-1.5 bg-slate-100/80 rounded px-1.5 py-1 border border-slate-200 shadow-inner no-select">
+                                    <button onclick="updateKpi(${cIdx}, ${tIdx}, ${kIdx}, -1)" class="w-6 h-6 bg-white rounded shadow text-slate-400 hover:text-blue-600 hover:bg-slate-50 flex items-center justify-center font-bold active:scale-95"><i class="fa-solid fa-minus text-[10px]"></i></button>
+                                    <span class="text-[12px] font-black text-slate-700 w-11 text-center whitespace-nowrap tracking-tighter">${kpi.current}<span class="text-slate-400 font-normal mx-0.5">/</span>${kpi.target}</span>
+                                    <button onclick="updateKpi(${cIdx}, ${tIdx}, ${kIdx}, ${kpi.target >= 20 ? 5 : 1})" class="w-6 h-6 bg-white rounded shadow text-blue-600 hover:bg-blue-50 flex items-center justify-center font-bold active:scale-95"><i class="fa-solid fa-plus text-[10px]"></i></button>
+                                </div>`;
+                        }
+
+                        kpisHtml += `
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 py-3.5 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 rounded -mx-2 px-2 transition-colors group">
+                                <div class="flex items-start gap-3 flex-1 min-w-0">
+                                    <div class="shrink-0 pt-0.5">${controlHtml}</div>
+                                    <div class="text-[14px] leading-snug break-keep pt-1 pr-1 ${isDone ? 'text-slate-400 line-through opacity-70' : 'text-slate-800 font-medium'}">${isDone ? kpi.text : formatText(kpi.text)}</div>
+                                </div>
+                                <div class="shrink-0 flex justify-end pl-10 sm:pl-0">${getPriorityBadge(kpi.priority)}</div>
+                            </div>
+                        `;
+                    });
+
+                    if(visibleCount > 0) {
+                        hasVisibleTask = true;
+                        tasksHtml += `
+                            <div class="mb-6 last:mb-0">
+                                <h3 class="text-[13.5px] font-black text-slate-800 mb-2 border-l-[3.5px] border-${cat.color}-500 pl-2.5 leading-none tracking-tight">${task.title}</h3>
+                                <div class="bg-white p-2 sm:p-3 rounded-xl border border-slate-200 shadow-sm">${kpisHtml}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                let catPercent = catTarget === 0 ? 0 : Math.floor((catCurrent / catTarget) * 100);
+
+                if(isHideCompleted && !hasVisibleTask) {
+                    tasksHtml = `<div class="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-400"><i class="fa-solid fa-medal text-4xl text-${cat.color}-300 mb-3 drop-shadow-sm"></i><p class="font-bold text-sm text-${cat.color}-600">이 섹션의 정량 과업을 모두 달성했습니다!</p></div>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="bg-slate-50/80 rounded-2xl border border-slate-200 overflow-hidden flex flex-col h-full shadow-sm hover:shadow-md transition-shadow">
+                        <div class="bg-${cat.color}-50 px-5 py-4 border-b border-${cat.color}-100 flex justify-between items-center">
+                            <h2 class="text-[16px] font-black text-${cat.color}-900 flex items-center tracking-tight"><i class="fa-solid ${cat.icon} w-6 mr-1.5 text-${cat.color}-600"></i>${cat.title}</h2>
+                            <span class="text-[12px] font-black bg-white px-2.5 py-0.5 rounded-md text-${cat.color}-700 shadow-sm border border-${cat.color}-200">${catPercent}%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 h-1.5"><div class="bg-${cat.color}-500 h-1.5 progress-bar" style="width: ${catPercent}%"></div></div>
+                        <div class="p-4 md:p-5 flex-1">${tasksHtml}</div>
+                    </div>
+                `;
+            });
+
+            let overall = totalTarget === 0 ? 0 : Math.floor((totalCurrent / totalTarget) * 100);
+            document.getElementById('total-progress-text').innerText = `${overall}%`;
+            document.getElementById('total-count-text').innerText = `${totalCurrent} / ${totalTarget} 건 완료`;
+            document.getElementById('total-progress').style.width = `${overall}%`;
+        }
+
+        render();
+    </script>
+</body>
+</html>
