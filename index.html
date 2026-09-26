@@ -3,233 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WBS Master Dashboard V4</title>
+    <title>Micro KPI Dashboard V5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { background-color: #f4f4f5; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .progress-bar { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
-        .toggle-checkbox:checked { right: 0; border-color: #18181b; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #18181b; }
-        .toggle-checkbox:checked + .toggle-label:before { transform: translateX(100%); }
-        .no-select { user-select: none; -webkit-user-select: none; }
+        body { background-color: #f3f4f6; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .progress-bar { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* 가시성 개선: 넘버(숫자) 하이라이트 */
-        .num-highlight { font-weight: 800; color: #18181b; background: #e4e4e7; padding: 2px 6px; border-radius: 6px; margin: 0 2px; }
+        /* 토글 스위치 */
+        .toggle-checkbox:checked { right: 0; border-color: #1e293b; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #1e293b; }
+        .toggle-checkbox:checked + .toggle-label:before { transform: translateX(100%); }
         
-        /* 독립된 카드 UI 부드러운 호버 효과 */
-        .task-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .task-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
+        /* 텍스트 내 숫자 자동 강조 */
+        .num-highlight { font-weight: 900; color: #2563eb; background-color: #eff6ff; padding: 2px 6px; border-radius: 6px; margin: 0 2px; }
+        
+        /* 카드 UI 부드러운 호버 및 터치 액션 */
+        .task-card { transition: all 0.2s ease; border: 2px solid transparent; }
+        .task-card:active { transform: scale(0.98); }
+        
+        /* 🌟 달력(Date) 인풋을 뱃지 위에 투명하게 덮어씌움 */
+        .date-input-overlay { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .date-input-overlay::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
     </style>
 </head>
-<body class="text-zinc-800 pb-24">
+<body class="text-slate-800 pb-28">
 
-    <!-- 미니멀 상단 헤더 -->
-    <div class="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-zinc-200 px-5 py-4 mb-6 shadow-sm">
+    <!-- 🌟 시원하고 넓은 상단 헤더 -->
+    <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-5 py-4 mb-6 shadow-sm">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="w-full flex justify-between items-center md:w-auto">
-                <h1 class="text-[22px] font-black text-zinc-900 tracking-tight flex items-center">
-                    <i class="fa-solid fa-layer-group text-zinc-400 mr-2.5"></i>Master Plan
+                <h1 class="text-[22px] font-black text-slate-900 tracking-tight flex items-center">
+                    <i class="fa-solid fa-list-check text-blue-600 mr-2.5"></i>Micro WBS
                 </h1>
-                <button onclick="setGoogleUrl()" class="md:hidden text-zinc-400 hover:text-zinc-800 bg-zinc-100 p-2.5 rounded-lg transition-colors"><i class="fa-solid fa-sliders"></i></button>
             </div>
             
             <div class="flex items-center gap-3 w-full md:w-auto overflow-x-auto hide-scrollbar justify-between md:justify-end">
-                <div class="flex items-center bg-zinc-100/80 rounded-lg px-3 py-2 shrink-0 cursor-pointer hover:bg-zinc-200 transition-colors shadow-sm" onclick="document.getElementById('hide-toggle').click()">
-                    <span class="text-[13px] font-bold text-zinc-600 mr-2"><i class="fa-solid fa-eye-slash mr-1"></i>완료 숨기기</span>
+                <div class="flex items-center bg-slate-100 rounded-xl px-3.5 py-2 shrink-0 cursor-pointer hover:bg-slate-200 transition-colors" onclick="document.getElementById('hide-toggle').click()">
+                    <span class="text-[14px] font-bold text-slate-700 mr-2.5"><i class="fa-solid fa-eye-slash mr-1.5"></i>완료 숨김</span>
                     <div class="relative inline-block w-10 align-middle select-none pointer-events-none">
                         <input type="checkbox" id="hide-toggle" onchange="toggleHide()" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none z-10 transition-transform duration-200"/>
-                        <label class="toggle-label block overflow-hidden h-5 rounded-full bg-zinc-300 transition-colors duration-200"></label>
+                        <label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 transition-colors duration-200"></label>
                     </div>
                 </div>
                 
                 <div class="flex gap-2 shrink-0">
-                    <button onclick="syncToCloud()" class="bg-zinc-900 text-white px-4 py-2 rounded-lg text-[13px] font-bold shadow-md active:scale-95 transition-all flex items-center">
-                        <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i> 동기화
+                    <button onclick="syncToCloud()" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-[14px] font-bold shadow-md active:scale-95 transition-all flex items-center">
+                        <i class="fa-solid fa-cloud-arrow-up mr-2"></i> 클라우드 저장
                     </button>
-                    <button onclick="loadFromCloud()" class="bg-white text-zinc-900 border border-zinc-200 px-4 py-2 rounded-lg text-[13px] font-bold shadow-sm hover:bg-zinc-50 active:scale-95 transition-all flex items-center">
-                        <i class="fa-solid fa-rotate-right mr-1.5"></i> 로드
-                    </button>
-                    <button onclick="setGoogleUrl()" class="hidden md:block text-zinc-400 hover:text-zinc-800 bg-zinc-100 p-2 rounded-lg transition-colors"><i class="fa-solid fa-sliders"></i></button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 md:px-5">
-        <!-- 메인 프로그레스 보드 -->
-        <div class="w-full bg-zinc-900 p-6 md:p-8 rounded-3xl shadow-lg mb-8 text-white relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+    <div class="max-w-7xl mx-auto px-4 md:px-6">
+        <!-- 🌟 가시성 극대화 총괄 진행률 보드 -->
+        <div class="w-full bg-slate-900 p-7 md:p-8 rounded-[32px] shadow-xl mb-10 text-white relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl"></div>
             
-            <div class="flex justify-between items-end mb-4 relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 relative z-10 gap-3">
                 <div>
-                    <span class="block text-[12px] font-bold text-zinc-400 tracking-widest mb-1.5 uppercase">Overall Progress</span>
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-5xl font-black text-white tracking-tighter drop-shadow-md" id="total-progress-text">0%</span>
-                    </div>
+                    <span class="block text-[13px] font-black text-slate-400 tracking-widest mb-1.5 uppercase">Overall Completion</span>
+                    <span class="text-6xl font-black text-white tracking-tighter drop-shadow-md" id="total-progress-text">0%</span>
                 </div>
-                <div class="text-right">
-                    <span class="block text-[12px] font-bold text-zinc-400 mb-1.5">퀘스트 달성 수치</span>
-                    <span class="text-lg font-bold text-zinc-900 bg-white px-3.5 py-1.5 rounded-xl shadow-sm" id="total-count-text">0 / 0</span>
+                <div class="bg-slate-800/80 px-4 py-2.5 rounded-2xl border border-slate-700 flex flex-col items-end">
+                    <span class="block text-[12px] font-bold text-slate-400 mb-0.5">총 달성 퀘스트 수치</span>
+                    <span class="text-[18px] font-black text-blue-400" id="total-count-text">0 / 0</span>
                 </div>
             </div>
-            <div class="w-full bg-zinc-800 rounded-full h-3.5 relative z-10 overflow-hidden shadow-inner p-0.5">
-                <div id="total-progress" class="bg-white h-2.5 rounded-full progress-bar shadow-[0_0_10px_rgba(255,255,255,0.5)]" style="width: 0%"></div>
+            <div class="w-full bg-slate-800 rounded-full h-3.5 relative z-10 overflow-hidden shadow-inner p-0.5 border border-slate-700">
+                <div id="total-progress" class="bg-blue-500 h-2.5 rounded-full progress-bar shadow-[0_0_12px_rgba(59,130,246,0.6)]" style="width: 0%"></div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8" id="dashboard-container"></div>
+        <!-- 퀘스트 카드 컨테이너 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-7 md:gap-10" id="dashboard-container"></div>
     </div>
 
-    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-zinc-900/95 backdrop-blur-md text-white px-6 py-3.5 rounded-full text-[14px] font-bold shadow-xl opacity-0 transition-opacity pointer-events-none z-50 flex items-center gap-2.5 whitespace-nowrap border border-zinc-700"></div>
+    <!-- 플로팅 알림창 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl text-[15px] font-bold shadow-2xl opacity-0 transition-opacity pointer-events-none z-50 flex items-center gap-3 whitespace-nowrap border border-slate-700"></div>
 
     <script>
+        // 선생님의 구글 시트 URL
         const MY_GAS_URL = "https://script.google.com/macros/s/AKfycbyR8S_78zrgHjrVhgQlMZazpDpoBw7NZZOq0vB7iB0yIrbqo_O5B34Ye3QqZmRP0Qxu/exec";
-        if (!localStorage.getItem('googleSheetApiUrl')) localStorage.setItem('googleSheetApiUrl', MY_GAS_URL);
+        localStorage.setItem('googleSheetApiUrl', MY_GAS_URL);
 
-        // 오늘 기준 날짜 생성 헬퍼
-        const currYear = new Date().getFullYear();
         function getFutureDate(daysAdded) {
             let d = new Date(); d.setDate(d.getDate() + daysAdded);
             return d.toISOString().split('T')[0]; 
         }
 
-        // 🎯 V4 데이터베이스 (Due Date 세팅)
+        // 🎯 극한으로 쪼갠(Micro) KPI 데이터베이스
         const initialData = [
             {
-                title: '🎓 커리어 & 학위', color: 'blue',
+                title: '🎓 C1. 학위 및 이직 파이프라인', color: 'blue', icon: 'fa-user-graduate',
                 tasks: [
-                    { title: '학점은행제 행정 (102학점)', kpis: [
-                        { text: '오산대 제적/성적증명서 PDF 발급', current: 0, target: 2, unit: '건', dueDate: getFutureDate(2) },
-                        { text: '학은제 4년제 학사 전공 변경 등록', current: 0, target: 1, unit: '건', dueDate: getFutureDate(7) },
-                        { text: '대기 중인 36학점 수수료 결제', current: 0, target: 1, unit: '건', dueDate: getFutureDate(7) },
-                        { text: '잔여 학점 통합 102학점 서류 제출', current: 0, target: 1, unit: '건', dueDate: getFutureDate(14) }
+                    { title: '학점은행제 행정처리 (102학점)', kpis: [
+                        { text: '오산대 교무처 통화하여 자퇴(제적) 처리 확인', current: 0, target: 1, dueDate: getFutureDate(1) },
+                        { text: '정부24 접속 후 오산대 제적증명서 PDF 발급', current: 0, target: 1, dueDate: getFutureDate(1) },
+                        { text: '정부24 접속 후 오산대 성적증명서 PDF 발급', current: 0, target: 1, dueDate: getFutureDate(1) },
+                        { text: '국가평생교육진흥원 로그인 및 4년제 전공 변경 신청', current: 0, target: 1, dueDate: getFutureDate(3) },
+                        { text: '대기 중인 36학점 수수료 36,000원 결제', current: 0, target: 1, dueDate: getFutureDate(3) },
+                        { text: '잔여 학점 통합하여 최종 102학점 서류 제출', current: 0, target: 1, dueDate: getFutureDate(7) }
                     ]},
-                    { title: 'PM 이직 파이프라인 구축', kpis: [
-                        { text: '링크드인 이력서 핵심 성과 업데이트', current: 0, target: 3, unit: '문장', dueDate: getFutureDate(10) },
-                        { text: '육아휴직 1년 보장 공공/산단 채용 스크랩', current: 0, target: 5, unit: '곳', dueDate: getFutureDate(14) },
-                        { text: '타겟 공공기관 입사지원서/포폴 제출', current: 0, target: 2, unit: '곳', dueDate: getFutureDate(21) }
+                    { title: 'PM 이직 (육휴 보장 공공기관)', kpis: [
+                        { text: '링크드인 프로필: 정부사업 핸들링 성과 3줄 작성', current: 0, target: 3, dueDate: getFutureDate(5) },
+                        { text: '사람인/잡코리아 "산학협력단, 재단" 알림 검색 설정', current: 0, target: 1, dueDate: getFutureDate(7) },
+                        { text: '육아휴직 1년 보장되는 타겟 공공기관 공고 스크랩', current: 0, target: 5, dueDate: getFutureDate(10) },
+                        { text: '타겟 기관 지원용 이력서/포트폴리오 PDF 추출', current: 0, target: 1, dueDate: getFutureDate(14) },
+                        { text: '타겟 공공기관 입사지원(제출) 완료', current: 0, target: 2, dueDate: getFutureDate(21) }
                     ]}
                 ]
             },
             {
-                title: '📉 리스크 방어 & 재무', color: 'emerald',
+                title: '📉 C2. 리스크 방어 & 자산 관리', color: 'emerald', icon: 'fa-chart-line',
                 tasks: [
-                    { title: 'KOSPI 인버스 기계적 매도', kpis: [
-                        { text: 'KOSPI 7150선 도달 시 전량 기계적 매도', current: 0, target: 1, unit: '회', dueDate: getFutureDate(2) },
-                        { text: 'KOSPI 6800선 반등 시 분할 비중축소', current: 0, target: 2, unit: '회', dueDate: getFutureDate(4) },
-                        { text: '횡보 시 롤오버 방어 수요일 무조건 매도', current: 0, target: 1, unit: '회', dueDate: getFutureDate(3) }
+                    { title: 'KOSPI 인버스 기계적 매도 룰', kpis: [
+                        { text: '증권앱 접속: KOSPI 7150선 도달 시 알림(푸시) 설정', current: 0, target: 1, dueDate: getFutureDate(1) },
+                        { text: '[상승] KOSPI 7150 돌파 시 1765원 물량 100% 매도', current: 0, target: 1, dueDate: getFutureDate(2) },
+                        { text: '[하락] KOSPI 6800 하락 시 50% 분할 매도', current: 0, target: 1, dueDate: getFutureDate(4) },
+                        { text: '매주 수요일 대출/롤오버 방어용 정기 분할 매도', current: 0, target: 4, dueDate: getFutureDate(30) }
                     ]},
-                    { title: '현금흐름 및 자산 배분', kpis: [
-                        { text: '전월 지출 112만 원 엑셀 항목별 복기', current: 0, target: 1, unit: '건', dueDate: getFutureDate(3) },
-                        { text: '차월 타이트한 예산안(90만 원) 엑셀 작성', current: 0, target: 1, unit: '건', dueDate: getFutureDate(5) },
-                        { text: '차/집/주식 자산 배분 비율 파이차트화', current: 0, target: 1, unit: '건', dueDate: getFutureDate(15) },
-                        { text: '마이크로 인컴(아주 작은 수입) 창출 가설', current: 0, target: 1, unit: '회', dueDate: getFutureDate(30) }
+                    { title: '현금흐름 통제 & 라이프 예산', kpis: [
+                        { text: '전월 카드/계좌 지출 내역(112만 원) 엑셀 다운로드', current: 0, target: 1, dueDate: getFutureDate(2) },
+                        { text: '전월 불필요한 누수 지출 항목 3가지 형광펜 체크', current: 0, target: 3, dueDate: getFutureDate(2) },
+                        { text: '차월 타이트한 예산안(90만 원) 항목별 엑셀 배분', current: 0, target: 1, dueDate: getFutureDate(4) },
+                        { text: '차량/주택/주식/현금 자산 배분 비율 파이차트화', current: 0, target: 1, dueDate: getFutureDate(10) },
+                        { text: '당근마켓, 중고나라 등 마이크로 인컴 1건 실행', current: 0, target: 1, dueDate: getFutureDate(20) }
                     ]}
                 ]
             },
             {
-                title: '🚀 비즈니스 & 앱 런칭', color: 'indigo',
+                title: '🚀 C3. P2 앱 런칭 & P1 AI 사업', color: 'indigo', icon: 'fa-mobile-screen',
                 tasks: [
-                    { title: 'P2: 앱 서비스 기획 및 개발', kpis: [
-                        { text: '일기 앱 4사분면 기반 오디오 스템 제작', current: 0, target: 80, unit: '개', dueDate: getFutureDate(7) },
-                        { text: '오디오 크로스페이드 믹싱 로직 다이어그램', current: 0, target: 1, unit: '건', dueDate: getFutureDate(14) },
-                        { text: '일기 앱 지인 대상 TestFlight 베타 배포', current: 0, target: 3, unit: '명', dueDate: getFutureDate(21) },
-                        { text: '시니어 케어 / 똑똑한 소비자 앱 기획안', current: 0, target: 3, unit: '장', dueDate: getFutureDate(30) }
+                    { title: 'P2: 감정 분석 일기 앱 베타', kpis: [
+                        { text: '[Q1 기쁨] 통통 튀는 오디오 스템 루프 제작', current: 0, target: 20, dueDate: getFutureDate(5) },
+                        { text: '[Q2 분노] 빠르고 긴장감 있는 오디오 스템 제작', current: 0, target: 20, dueDate: getFutureDate(7) },
+                        { text: '[Q3 슬픔] 첼로/느린 피아노 오디오 스템 제작', current: 0, target: 20, dueDate: getFutureDate(9) },
+                        { text: '[Q4 평온] 어쿠스틱/자연 앰비언스 오디오 스템 제작', current: 0, target: 20, dueDate: getFutureDate(11) },
+                        { text: '감정 전환 시 오디오 크로스페이드 로직 다이어그램', current: 0, target: 1, dueDate: getFutureDate(14) },
+                        { text: 'iOS TestFlight 앱 빌드 파일 업로드', current: 0, target: 1, dueDate: getFutureDate(21) },
+                        { text: '지인 3명에게 TestFlight 링크 발송 및 피드백 수집', current: 0, target: 3, dueDate: getFutureDate(25) }
                     ]},
-                    { title: 'P1: AI 과업 생태계 조성', kpis: [
-                        { text: '위키하우 형태 AI 업무 스탠다드 와이어프레임', current: 0, target: 5, unit: '장', dueDate: getFutureDate(14) },
-                        { text: '국가 차원 AI 연구 가설 및 프롬프트 문서화', current: 0, target: 1, unit: '건', dueDate: getFutureDate(20) },
-                        { text: 'AI 도서 샘플 강의안 세팅', current: 0, target: 3, unit: '건', dueDate: getFutureDate(25) },
-                        { text: 'AI 기술 특허 아이디어 선행기술조사', current: 0, target: 3, unit: '회', dueDate: getFutureDate(35) }
+                    { title: 'P1: 국가 AI 과업 생태계', kpis: [
+                        { text: '위키하우 벤치마킹 AI 업무 스탠다드 목차 5개 텍스트화', current: 0, target: 5, dueDate: getFutureDate(10) },
+                        { text: 'AI 스탠다드 커뮤니티 Figma 와이어프레임 스케치', current: 0, target: 5, dueDate: getFutureDate(14) },
+                        { text: '국가 차원 AI 활용 연구 가설 프롬프트 1장 작성', current: 0, target: 1, dueDate: getFutureDate(18) },
+                        { text: 'AI 도서 출판용 챕터 1 샘플 강의안 작성', current: 0, target: 1, dueDate: getFutureDate(25) },
+                        { text: '키프리스(KIPRIS) AI 기술 특허 선행기술조사 캡처', current: 0, target: 3, dueDate: getFutureDate(30) }
                     ]}
                 ]
             },
             {
-                title: '🎨 아트 & 3D 브랜딩', color: 'purple',
+                title: '🎨 C4. 아트 & 퍼스널 브랜딩', color: 'purple', icon: 'fa-cube',
                 tasks: [
-                    { title: 'P3: 음악 프로듀싱 파이프라인', kpis: [
-                        { text: '개인 앨범 "피네" 마스터링 WAV 추출', current: 0, target: 1, unit: '곡', dueDate: getFutureDate(10) },
-                        { text: '비비아나킴 "메르헨" 앨범 방향성 피드백', current: 0, target: 1, unit: '건', dueDate: getFutureDate(5) },
-                        { text: '윤경님 AI 뮤직다이어리 넥스트 스텝 노션', current: 0, target: 1, unit: '건', dueDate: getFutureDate(8) },
-                        { text: '가요 음악 제작 및 프로듀싱 레슨 수강', current: 0, target: 4, unit: '회', dueDate: getFutureDate(30) }
+                    { title: 'P3: 음악 파이프라인 정리', kpis: [
+                        { text: '개인 앨범 "피네" 트랙 EQ/믹싱 밸런스 최종 수정', current: 0, target: 1, dueDate: getFutureDate(5) },
+                        { text: '"피네" 최종 마스터링 및 24bit WAV 파일 바운스', current: 0, target: 1, dueDate: getFutureDate(7) },
+                        { text: '비비아나킴 "메르헨" 앨범 피드백 텍스트 카톡 발송', current: 0, target: 1, dueDate: getFutureDate(4) },
+                        { text: 'AI 뮤직다이어리 윤경님 결과물 리뷰 노션 작성', current: 0, target: 1, dueDate: getFutureDate(6) },
+                        { text: '가요 프로듀싱 오프라인 레슨 출석 및 과제 수행', current: 0, target: 4, dueDate: getFutureDate(30) },
+                        { text: '유튜브 수면/ASMR 1시간 루프 영상 인코딩 및 업로드', current: 0, target: 2, dueDate: getFutureDate(14) }
                     ]},
-                    { title: '퍼스널 브랜딩 (3D & 마케팅)', kpis: [
-                        { text: '글로벌 3D 플랫폼 포트폴리오 업로드', current: 0, target: 3, unit: '곳', dueDate: getFutureDate(14) },
-                        { text: '고객이 나를 선택할 Selling Point 카피 픽스', current: 0, target: 3, unit: '문장', dueDate: getFutureDate(14) },
-                        { text: '데이트 쇼핑몰/AI 스터디 인스타 피드 관리', current: 0, target: 2, unit: '건', dueDate: getFutureDate(21) }
+                    { title: '3D 외주 & 브랜딩 (Selling Point)', kpis: [
+                        { text: '과거 3D 작업물 베스트 렌더링 스크린샷 5장 리사이징', current: 0, target: 5, dueDate: getFutureDate(7) },
+                        { text: 'Upwork/Fiverr 영문 프로필 ChatGPT 번역 및 세팅', current: 0, target: 2, dueDate: getFutureDate(10) },
+                        { text: '고객이 내 작업을 구매할 이유(Selling Point) 3문장 도출', current: 0, target: 3, dueDate: getFutureDate(12) },
+                        { text: '"제 4의 벽을 깨는 아티스트" 슬로건 인스타 프로필 적용', current: 0, target: 1, dueDate: getFutureDate(14) },
+                        { text: '인스타 데이트 쇼핑몰 / AI 카피 스터디 피드 기획', current: 0, target: 2, dueDate: getFutureDate(18) }
                     ]}
                 ]
             },
             {
-                title: '❤️ 미국 일정 & 샘(Sam)', color: 'rose',
+                title: '❤️ C5. 미국 일정 & 기념일', color: 'rose', icon: 'fa-plane',
                 tasks: [
-                    { title: '이벤트 및 기념일 퀘스트', kpis: [
-                        { text: '생일 노원 스시 예약 및 에어팟 픽업', current: 0, target: 2, unit: '건', dueDate: `${currYear}-10-29` }, // 고정 듀데이
-                        { text: '1주년 기억 여행 동선 공유 및 꽃 픽업', current: 0, target: 2, unit: '건', dueDate: `${currYear}-10-22` }, // 고정 듀데이
-                        { text: '미국 부모님 앰배서더 콤보 결제', current: 0, target: 4, unit: '건', dueDate: getFutureDate(15) },
-                        { text: '12/24 시카고 9인 외식 OpenTable 예약', current: 0, target: 1, unit: '건', dueDate: getFutureDate(12) },
-                        { text: '샤브샤브용 H마트 장보기 쇼핑 메모', current: 0, target: 1, unit: '건', dueDate: getFutureDate(30) }
+                    { title: '기념일 이벤트 및 선물 결제', kpis: [
+                        { text: '1주년 기억 여행 데이트 코스 타임테이블 카톡 브리핑', current: 0, target: 1, dueDate: '2024-10-18' },
+                        { text: '1주년 예약한 맞춤 꽃다발 픽업 및 전달', current: 0, target: 1, dueDate: '2024-10-22' },
+                        { text: '여자친구 생일 노원 스시 코스 예약 전화 완료', current: 0, target: 1, dueDate: '2024-10-25' },
+                        { text: '생일 선물(에어팟) 구매 및 축하 손편지 쓰기', current: 0, target: 2, dueDate: '2024-10-29' },
+                        { text: '아버님 선물: 국순당 백세고 온라인 재고 예약', current: 0, target: 1, dueDate: getFutureDate(10) },
+                        { text: '부모님 공용: 정관장 황진단 30환 결제', current: 0, target: 1, dueDate: getFutureDate(10) },
+                        { text: '어머님 선물: 전통 민화 실크 스카프 구매', current: 0, target: 1, dueDate: getFutureDate(12) },
+                        { text: '스카프 무늬에 맞춘 자개 손거울 결제', current: 0, target: 1, dueDate: getFutureDate(12) }
                     ]},
-                    { title: '관계 및 라이프 루틴', kpis: [
-                        { text: '2주간 데이트 예산 계산', current: 0, target: 1, unit: '건', dueDate: getFutureDate(3) },
-                        { text: '미국 14일 체류 시 샘과 루틴 타임블록 작성', current: 0, target: 1, unit: '장', dueDate: getFutureDate(20) },
-                        { text: '버스 등 자투리 시간 틈틈이 운동 달성', current: 0, target: 3, unit: '회', dueDate: getFutureDate(7) }
+                    { title: '미국 루틴 & 여행 퀘스트', kpis: [
+                        { text: '12/24 시카고 9인 외식 Maggiano\'s 오픈테이블 예약', current: 0, target: 1, dueDate: getFutureDate(15) },
+                        { text: '시카고 H마트 샤브샤브 고기/부르스타 쇼핑 리스트 메모', current: 0, target: 1, dueDate: getFutureDate(20) },
+                        { text: '2주간 사용할 한국 데이트 비용 총 예산 계산', current: 0, target: 1, dueDate: getFutureDate(3) },
+                        { text: '미국 14일 체류 시 샘과 함께 유지할 타임블록 설계', current: 0, target: 1, dueDate: getFutureDate(25) },
+                        { text: '버스 등 자투리 시간 활용 틈틈이 스트레칭 하기', current: 0, target: 14, dueDate: getFutureDate(14) }
                     ]}
                 ]
             }
         ];
 
-        // 새로운 데이터 키 할당 (초기화)
-        let appData = JSON.parse(localStorage.getItem('myPmoDataV4')) || initialData;
+        let appData = JSON.parse(localStorage.getItem('myPmoDataV5')) || initialData;
         let isHideCompleted = false;
 
+        // 고유 ID 
         appData.forEach(c => c.tasks.forEach(t => t.kpis.forEach(k => { 
             if(!k.id) k.id = 'kpi_' + Math.random().toString(36).substr(2,9);
             if(k.current === undefined) k.current = 0;
             if(k.target === undefined) k.target = 1;
         })));
 
-        function showToast(msg, icon = 'fa-check') {
+        function showToast(msg, icon = 'fa-check-circle') {
             const t = document.getElementById('toast');
-            t.innerHTML = `<i class="fa-solid ${icon} text-emerald-400"></i> <span>${msg}</span>`;
+            t.innerHTML = `<i class="fa-solid ${icon} text-emerald-400 text-lg"></i> <span>${msg}</span>`;
             t.style.opacity = '1';
             setTimeout(() => t.style.opacity = '0', 2500);
         }
 
-        function setGoogleUrl() {
-            const currentUrl = localStorage.getItem('googleSheetApiUrl') || '';
-            const newUrl = prompt('구글 Apps Script 웹앱 URL 설정:', currentUrl);
-            if(newUrl !== null) { 
-                localStorage.setItem('googleSheetApiUrl', newUrl.trim()); 
-                showToast('설정 완료!'); 
-            }
-        }
-
         async function syncToCloud() {
             const url = localStorage.getItem('googleSheetApiUrl');
-            if(!url) return setGoogleUrl();
-            showToast('동기화 중...', 'fa-spinner fa-spin');
+            showToast('동기화 중입니다...', 'fa-spinner fa-spin');
             try { 
                 await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(appData) }); 
-                showToast('클라우드 저장 완료!'); 
+                showToast('클라우드에 안전하게 업데이트되었습니다!'); 
             } catch(e) { showToast('저장 실패', 'fa-xmark'); }
-        }
-
-        async function loadFromCloud() {
-            const url = localStorage.getItem('googleSheetApiUrl');
-            if(!url) return setGoogleUrl();
-            showToast('데이터 로드 중...', 'fa-spinner fa-spin');
-            try { 
-                const res = await fetch(url); const data = await res.json();
-                if(data && data.length > 0) { 
-                    appData = data; localStorage.setItem('myPmoDataV4', JSON.stringify(appData)); render(); 
-                    showToast('로드 완료!'); 
-                }
-            } catch(e) { showToast('로드 실패', 'fa-xmark'); }
         }
 
         function toggleHide() { 
@@ -237,57 +232,63 @@
             render(); 
         }
 
+        // 수치 컨트롤
         function updateKpi(cIdx, tIdx, kIdx, amount) {
             let kpi = appData[cIdx].tasks[tIdx].kpis.find(k => k.id === kIdx);
             if(kpi) {
                 kpi.current = Math.max(0, Math.min(kpi.target, kpi.current + amount));
-                localStorage.setItem('myPmoDataV4', JSON.stringify(appData));
+                localStorage.setItem('myPmoDataV5', JSON.stringify(appData));
                 render();
             }
         }
 
-        // 🌟 가시성 핵심 1: 숫자 텍스트 자동 하이라이트
-        function formatText(text) {
-            return text.replace(/([0-9,]+(?:건|개|명|장|회|%|곳|종|원|학점|시간|일|문장|부|곡)?)/g, '<span class="num-highlight">$1</span>');
+        // 🌟 달력 인풋 체인지 함수
+        function changeDueDate(cIdx, tIdx, kIdx, newDate) {
+            let kpi = appData[cIdx].tasks[tIdx].kpis.find(k => k.id === kIdx);
+            if(kpi && newDate) {
+                kpi.dueDate = newDate;
+                localStorage.setItem('myPmoDataV5', JSON.stringify(appData));
+                render();
+                showToast('마감일이 변경되어 재정렬되었습니다!', 'fa-calendar-check');
+            }
         }
 
-        // 🌟 가시성 핵심 2: D-Day 계산 및 시각화 뱃지
-        function getDdayBadge(dateString, isDone) {
-            if(isDone) return '<span class="text-zinc-400 text-[11px] font-bold bg-zinc-100/80 px-2.5 py-1 rounded-md shadow-sm border border-zinc-200">완료됨</span>';
+        // 텍스트 내 숫자 강조
+        function formatText(text) {
+            return text.replace(/([0-9,]+(?:건|개|명|장|회|%|곳|종|원|학점|시간|일|문장|부|곡|줄)?)/g, '<span class="num-highlight">$1</span>');
+        }
+
+        // 🌟 클릭하면 달력이 뜨는 마법의 뱃지 UI
+        function getDdayBadge(dateString, isDone, cIdx, tIdx, kId) {
+            if(isDone) return '<span class="text-slate-400 text-[12px] font-bold bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 mt-2.5 inline-flex items-center"><i class="fa-solid fa-check mr-1.5"></i>완료됨</span>';
             
-            const today = new Date();
-            today.setHours(0,0,0,0);
+            const today = new Date(); today.setHours(0,0,0,0);
             const due = new Date(dateString);
+            const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
             
-            const diffTime = due - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            let colorCls = 'text-zinc-500 bg-white border-zinc-200';
+            let cls = 'text-slate-600 bg-slate-100 border-slate-200 hover:bg-slate-200';
             let label = `D-${diffDays}`;
-            let icon = '<i class="fa-regular fa-calendar mr-1.5 text-zinc-400"></i>';
+            let icon = '<i class="fa-regular fa-calendar text-slate-500"></i>';
             
             if (diffDays < 0) { 
-                colorCls = 'text-red-600 bg-red-50 border-red-200'; 
-                label = `기한 초과 (D+${Math.abs(diffDays)})`; 
-                icon = '<i class="fa-solid fa-triangle-exclamation mr-1.5 text-red-500"></i>';
-            }
-            else if (diffDays === 0) { 
-                colorCls = 'text-red-600 bg-red-50 border-red-300 animate-pulse'; 
-                label = '오늘 마감!'; 
-                icon = '<i class="fa-solid fa-fire mr-1.5 text-red-500"></i>';
-            }
-            else if (diffDays <= 3) { 
-                colorCls = 'text-orange-600 bg-orange-50 border-orange-200'; 
-                icon = '<i class="fa-regular fa-clock mr-1.5 text-orange-500"></i>';
+                cls = 'text-red-700 bg-red-50 border-red-200'; label = `기한 초과 D+${Math.abs(diffDays)}`; icon = '<i class="fa-solid fa-triangle-exclamation text-red-500"></i>';
+            } else if (diffDays === 0) { 
+                cls = 'text-white bg-red-500 border-red-600 shadow-md animate-pulse'; label = '오늘 마감!'; icon = '<i class="fa-solid fa-fire text-white"></i>';
+            } else if (diffDays <= 3) { 
+                cls = 'text-orange-700 bg-orange-50 border-orange-200'; icon = '<i class="fa-regular fa-clock text-orange-500"></i>';
             }
             
-            const mm = String(due.getMonth() + 1).padStart(2, '0');
-            const dd = String(due.getDate()).padStart(2, '0');
-            
-            return `<div class="flex items-center gap-2 mt-3">
-                        <span class="border px-2 py-0.5 rounded-md text-[11px] font-black shadow-sm flex items-center ${colorCls}">${icon}${label}</span>
-                        <span class="text-[11px] font-bold text-zinc-400 tracking-tighter opacity-80"><i class="fa-solid fa-thumbtack mr-1"></i>${mm}월 ${dd}일</span>
-                    </div>`;
+            const mm = String(due.getMonth()+1).padStart(2,'0');
+            const dd = String(due.getDate()).padStart(2,'0');
+
+            return `
+                <div class="relative inline-flex items-center gap-2 mt-3.5 cursor-pointer group border ${cls} px-3 py-1.5 rounded-xl transition-colors shadow-sm">
+                    <span class="text-[13px] font-black flex items-center gap-1.5 pointer-events-none">${icon}${label}</span>
+                    <div class="h-3 w-[1.5px] bg-current opacity-20 pointer-events-none mx-0.5"></div>
+                    <!-- 🔥 투명 캘린더 인풋 -->
+                    <input type="date" value="${dateString}" onchange="changeDueDate(${cIdx}, ${tIdx}, '${kId}', this.value)" class="date-input-overlay">
+                    <span class="text-[12px] font-bold opacity-80 pointer-events-none flex items-center">${mm}/${dd} <i class="fa-solid fa-pen text-[10px] ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity"></i></span>
+                </div>`;
         }
 
         function render() {
@@ -304,10 +305,9 @@
                     let kpisHtml = '';
                     let visibleCount = 0;
 
-                    // 🌟 가시성 핵심 3: 자동 정렬 (마감일이 급한 것부터 맨 위로)
+                    // 🌟 마감일이 급한 퀘스트부터 위로 자동 정렬
                     let sortedKpis = [...task.kpis].sort((a, b) => {
-                        const aDone = a.current >= a.target;
-                        const bDone = b.current >= b.target;
+                        const aDone = a.current >= a.target; const bDone = b.current >= b.target;
                         if(aDone !== bDone) return aDone ? 1 : -1; 
                         return new Date(a.dueDate) - new Date(b.dueDate);
                     });
@@ -320,30 +320,30 @@
                         if(isHideCompleted && isDone) return;
                         visibleCount++;
 
-                        // 터치 면적을 넓힌 미니멀 컨트롤 버튼
+                        // 컨트롤 버튼
                         let controlHtml = '';
                         if(kpi.target === 1) {
                             controlHtml = `
-                                <div class="w-8 h-8 rounded-xl flex items-center justify-center cursor-pointer transition-all shadow-sm border-2 ${isDone ? 'bg-zinc-800 border-zinc-800' : 'bg-white border-zinc-300 hover:border-zinc-400'}" onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${isDone ? -1 : 1})">
-                                    <i class="fa-solid fa-check text-white text-[15px] transition-transform ${isDone ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}"></i>
+                                <div class="w-10 h-10 rounded-[14px] flex items-center justify-center cursor-pointer transition-all shadow-sm border-[2px] ${isDone ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-300 hover:border-slate-400'}" onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${isDone ? -1 : 1})">
+                                    <i class="fa-solid fa-check text-white text-[20px] transition-transform ${isDone ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}"></i>
                                 </div>`;
                         } else {
                             controlHtml = `
-                                <div class="flex items-center gap-1.5 bg-white rounded-xl p-1 border border-zinc-200 shadow-sm no-select">
-                                    <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', -1)" class="w-7 h-7 rounded-lg hover:bg-zinc-100 text-zinc-400 flex items-center justify-center active:scale-95"><i class="fa-solid fa-minus text-[11px]"></i></button>
-                                    <span class="text-[13px] font-black text-zinc-800 w-10 text-center tracking-tighter">${kpi.current}<span class="text-zinc-300 font-normal mx-0.5">/</span>${kpi.target}</span>
-                                    <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${kpi.target >= 20 ? 5 : 1})" class="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center justify-center font-bold active:scale-95"><i class="fa-solid fa-plus text-[11px]"></i></button>
+                                <div class="flex items-center gap-1.5 bg-slate-50 rounded-2xl p-1.5 border border-slate-200 shadow-sm no-select">
+                                    <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', -1)" class="w-8 h-8 rounded-xl bg-white hover:bg-slate-200 text-slate-500 shadow-sm flex items-center justify-center active:scale-95 transition-all"><i class="fa-solid fa-minus text-[13px]"></i></button>
+                                    <span class="text-[14px] font-black text-slate-800 w-12 text-center tracking-tighter">${kpi.current}<span class="text-slate-400 font-normal mx-0.5">/</span>${kpi.target}</span>
+                                    <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${kpi.target >= 20 ? 5 : 1})" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-white shadow-sm flex items-center justify-center active:scale-95 transition-all"><i class="fa-solid fa-plus text-[13px]"></i></button>
                                 </div>`;
                         }
 
-                        // 가시성을 넓힌 독립 카드 UI (Card)
+                        // 🌟 가시성을 극대화한 넓은 여백의 하얀색 카드(Card) 
                         kpisHtml += `
-                            <div class="task-card flex flex-col p-4 mb-3.5 border border-zinc-200/80 rounded-2xl bg-white ${isDone ? 'opacity-40 grayscale-[20%]' : 'shadow-sm'}">
-                                <div class="flex items-start gap-3.5 w-full">
+                            <div class="task-card flex flex-col p-5 mb-4 rounded-3xl bg-white border border-slate-200/80 shadow-sm ${isDone ? 'opacity-50 grayscale bg-slate-50' : ''}">
+                                <div class="flex items-start gap-4 w-full">
                                     <div class="shrink-0 mt-0.5">${controlHtml}</div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="text-[15px] leading-snug break-keep ${isDone ? 'text-zinc-400 line-through' : 'text-zinc-800 font-bold'}">${isDone ? kpi.text : formatText(kpi.text)}</div>
-                                        ${getDdayBadge(kpi.dueDate, isDone)}
+                                    <div class="flex-1 min-w-0 pt-0.5">
+                                        <div class="text-[16px] md:text-[17px] leading-snug break-keep ${isDone ? 'text-slate-400 line-through' : 'text-slate-900 font-bold'}">${isDone ? kpi.text : formatText(kpi.text)}</div>
+                                        ${getDdayBadge(kpi.dueDate, isDone, cIdx, tIdx, kpi.id)}
                                     </div>
                                 </div>
                             </div>
@@ -353,9 +353,9 @@
                     if(visibleCount > 0) {
                         hasVisibleTask = true;
                         tasksHtml += `
-                            <div class="mb-8 last:mb-0">
-                                <h3 class="text-[14px] font-black text-zinc-800 mb-4 tracking-tight flex items-center bg-zinc-100/70 w-fit px-3.5 py-1.5 rounded-lg border border-zinc-200"><span class="w-2 h-2 rounded-full bg-${cat.color}-500 mr-2.5"></span>${task.title}</h3>
-                                <div class="px-1">${kpisHtml}</div>
+                            <div class="mb-10 last:mb-0 bg-slate-50/70 p-3 md:p-5 rounded-[32px] border border-slate-100">
+                                <h3 class="text-[15px] font-black text-slate-800 mb-4 tracking-tight flex items-center px-1"><span class="w-2.5 h-2.5 rounded-full bg-${cat.color}-500 mr-2.5"></span>${task.title}</h3>
+                                <div>${kpisHtml}</div>
                             </div>
                         `;
                     }
@@ -364,17 +364,17 @@
                 let catPercent = catTarget === 0 ? 0 : Math.floor((catCurrent / catTarget) * 100);
 
                 if(isHideCompleted && !hasVisibleTask) {
-                    tasksHtml = `<div class="flex flex-col items-center justify-center py-16 text-zinc-400"><i class="fa-solid fa-trophy text-5xl text-${cat.color}-400 mb-4 opacity-50"></i><p class="font-bold text-[14px]">모든 퀘스트 클리어!</p></div>`;
+                    tasksHtml = `<div class="flex flex-col items-center justify-center py-24 text-slate-300"><i class="fa-solid fa-clipboard-check text-6xl text-${cat.color}-400/50 mb-5"></i><p class="font-bold text-[16px] text-slate-400">모든 퀘스트 클리어!</p></div>`;
                 }
 
                 grid.innerHTML += `
-                    <div class="bg-zinc-50/50 rounded-[28px] border border-zinc-200/80 overflow-hidden flex flex-col h-full">
-                        <div class="px-6 md:px-7 py-5 flex justify-between items-center relative bg-white border-b border-zinc-100">
-                            <h2 class="text-[18px] font-black text-zinc-800 tracking-tight flex items-center"><i class="fa-solid ${cat.icon} text-${cat.color}-500 w-7 mr-1.5 text-lg"></i>${cat.title}</h2>
-                            <span class="text-[13px] font-black bg-zinc-100 px-3 py-1 rounded-lg text-zinc-600">${catPercent}%</span>
+                    <div class="bg-white rounded-[36px] border border-slate-200 overflow-hidden flex flex-col h-full shadow-sm">
+                        <div class="px-7 md:px-8 py-6 flex justify-between items-center relative border-b border-slate-100">
+                            <h2 class="text-[20px] font-black text-slate-900 tracking-tight flex items-center"><i class="fa-solid ${cat.icon} text-${cat.color}-500 w-8 mr-1.5 text-xl"></i>${cat.title}</h2>
+                            <span class="text-[14px] font-black bg-slate-100 px-3.5 py-1.5 rounded-xl text-slate-700">${catPercent}%</span>
                         </div>
-                        <div class="px-6 md:px-7 pb-2 bg-white"><div class="w-full bg-zinc-100 h-1.5 rounded-full overflow-hidden"><div class="bg-${cat.color}-500 h-1.5 progress-bar" style="width: ${catPercent}%"></div></div></div>
-                        <div class="px-6 md:px-7 pt-5 pb-7 flex-1">${tasksHtml}</div>
+                        <div class="w-full bg-slate-100 h-2"><div class="bg-${cat.color}-500 h-2 progress-bar shadow-sm" style="width: ${catPercent}%"></div></div>
+                        <div class="px-3 md:px-6 pt-6 pb-8 flex-1">${tasksHtml}</div>
                     </div>
                 `;
             });
