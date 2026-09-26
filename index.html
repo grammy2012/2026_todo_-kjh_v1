@@ -3,435 +3,495 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Realistic PMO Dashboard V6.1</title>
+    <title>Portfolio Archive Dashboard V7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { background-color: #f1f5f9; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #f8fafc; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
         .progress-bar { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .toggle-checkbox:checked { right: 0; border-color: #1e293b; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #1e293b; }
-        .toggle-checkbox:checked + .toggle-label:before { transform: translateX(100%); }
-        .num-highlight { font-weight: 900; color: #2563eb; background-color: #eff6ff; padding: 2px 6px; border-radius: 6px; margin: 0 2px; }
-        .task-card { transition: all 0.2s ease; border: 2px solid transparent; }
+        .num-highlight { font-weight: 800; color: #2563eb; background-color: #eff6ff; padding: 2px 6px; border-radius: 6px; margin: 0 2px; }
+        
+        /* 탭 액션 */
+        .tab-btn { transition: all 0.2s ease; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 900; background-color: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* 카드 상호작용 */
+        .task-card { cursor: pointer; transition: all 0.2s ease; border: 1px solid #e2e8f0; }
+        .task-card:hover { border-color: #93c5fd; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
         .task-card:active { transform: scale(0.98); }
-        .date-input-overlay { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-        .date-input-overlay::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
+        
+        /* 모달 애니메이션 */
+        .modal-overlay { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; backdrop-filter: blur(4px); }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { transform: scale(0.95) translateY(10px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
     </style>
 </head>
 <body class="text-slate-800 pb-28">
 
-    <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-5 py-4 mb-6 shadow-sm">
+    <!-- 상단 헤더 -->
+    <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-5 py-4 mb-6 shadow-sm">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="w-full flex justify-between items-center md:w-auto">
-                <h1 class="text-[22px] font-black text-slate-900 tracking-tight flex items-center">
-                    <i class="fa-solid fa-rocket text-blue-600 mr-2.5"></i>Master PMO <span class="ml-2 text-[12px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md border border-blue-200 font-bold">V6.1 Realistic</span>
-                </h1>
-            </div>
-            
-            <div class="flex items-center gap-3 w-full md:w-auto overflow-x-auto hide-scrollbar justify-between md:justify-end">
-                <div class="flex items-center bg-slate-100 rounded-xl px-3.5 py-2 shrink-0 cursor-pointer hover:bg-slate-200 transition-colors" onclick="document.getElementById('hide-toggle').click()">
-                    <span class="text-[14px] font-bold text-slate-700 mr-2.5"><i class="fa-solid fa-eye-slash mr-1.5"></i>완료 숨김</span>
-                    <div class="relative inline-block w-10 align-middle select-none pointer-events-none">
-                        <input type="checkbox" id="hide-toggle" onchange="toggleHide()" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none z-10 transition-transform duration-200"/>
-                        <label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 transition-colors duration-200"></label>
-                    </div>
-                </div>
-                <div class="flex gap-2 shrink-0">
-                    <button onclick="syncToCloud()" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-[14px] font-bold shadow-md active:scale-95 transition-all flex items-center">
-                        <i class="fa-solid fa-cloud-arrow-up mr-2"></i> 클라우드 저장
-                    </button>
-                </div>
+            <h1 class="text-[20px] md:text-[22px] font-black text-slate-900 tracking-tight flex items-center w-full md:w-auto">
+                <i class="fa-solid fa-box-archive text-blue-600 mr-2.5"></i>Archive PMO
+            </h1>
+            <div class="flex gap-2 w-full md:w-auto overflow-x-auto hide-scrollbar justify-end shrink-0">
+                <button onclick="openAddModal()" class="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl text-[13px] font-bold shadow-sm active:scale-95 transition-all flex items-center hover:bg-slate-200 shrink-0">
+                    <i class="fa-solid fa-plus mr-1.5"></i>새 과업 추가
+                </button>
+                <button onclick="syncToCloud()" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-[13px] font-bold shadow-md active:scale-95 transition-all flex items-center shrink-0 hover:bg-blue-700">
+                    <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>클라우드 저장
+                </button>
             </div>
         </div>
     </div>
 
     <div class="max-w-7xl mx-auto px-4 md:px-6">
-        
-        <!-- 전략 대시보드 (D-7 & 진척도) -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-            <div class="lg:col-span-2 bg-white p-6 md:p-8 rounded-[32px] shadow-sm border border-red-200 relative overflow-hidden flex flex-col h-full">
-                <div class="absolute -top-10 -right-10 w-48 h-48 bg-red-500 opacity-5 rounded-full blur-3xl pointer-events-none"></div>
-                <div class="flex justify-between items-center mb-5 relative z-10 border-b border-red-50 pb-3">
-                    <h2 class="text-[18px] md:text-[20px] font-black text-slate-900 tracking-tight flex items-center">
-                        <i class="fa-solid fa-fire text-red-500 mr-2.5 text-xl animate-pulse"></i>마감 임박 퀘스트 (D-7)
-                    </h2>
-                    <span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-lg text-[13px] border border-red-200 shadow-sm" id="urgent-count">0건</span>
+        <!-- 🌟 요약 보드 -->
+        <div class="bg-slate-900 p-6 md:p-8 rounded-[32px] shadow-xl text-white relative overflow-hidden mb-8 border-b-4 border-blue-500 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="absolute -top-10 -right-10 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="relative z-10 w-full md:w-1/2">
+                <span class="block text-[12px] font-bold text-blue-300 tracking-widest mb-1">TOTAL COMPLETION</span>
+                <span class="text-5xl md:text-6xl font-black text-white tracking-tighter" id="total-progress-text">0%</span>
+                <div class="mt-4 w-full bg-slate-800 h-2.5 rounded-full overflow-hidden shadow-inner">
+                    <div id="total-progress" class="bg-blue-500 h-2.5 rounded-full progress-bar shadow-[0_0_12px_rgba(59,130,246,0.6)]" style="width: 0%"></div>
                 </div>
-                <div id="urgent-tasks-container" class="relative z-10 flex-1 overflow-y-auto pr-1 max-h-[300px] lg:max-h-[350px] space-y-3 hide-scrollbar"></div>
             </div>
-
-            <div class="lg:col-span-1 bg-slate-900 p-6 md:p-8 rounded-[32px] shadow-xl text-white relative overflow-hidden flex flex-col h-full">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
-                <h2 class="text-[18px] md:text-[20px] font-black text-white tracking-tight flex items-center mb-6 relative z-10">
-                    <i class="fa-solid fa-chart-pie text-blue-400 mr-2.5 text-xl"></i>업무 완료도 보드
-                </h2>
-                <div class="mb-6 relative z-10 bg-slate-800/80 p-5 rounded-[24px] border border-slate-700 shadow-inner flex justify-between items-center">
-                    <div>
-                        <span class="block text-[11px] font-bold text-slate-400 tracking-widest mb-1">OVERALL PROGRESS</span>
-                        <span class="text-4xl font-black text-white" id="total-progress-text">0%</span>
-                    </div>
-                    <div class="text-right flex flex-col items-end">
-                        <span class="block text-[11px] font-bold text-slate-400 mb-1">달성 수치</span>
-                        <span class="text-[16px] font-black text-blue-400 bg-slate-900 px-3 py-1 rounded-lg border border-slate-700" id="total-count-text">0/0</span>
-                    </div>
+            <div class="relative z-10 w-full md:w-auto bg-slate-800/80 p-5 rounded-2xl border border-slate-700 flex gap-6 text-center shadow-inner">
+                <div>
+                    <span class="block text-[11px] font-bold text-slate-400 mb-1">달성 수치</span>
+                    <span class="text-[18px] font-black text-white" id="total-count-text">0 / 0</span>
                 </div>
-                <div id="category-progress-container" class="relative z-10 flex-1 flex flex-col justify-center space-y-4"></div>
+                <div class="w-px bg-slate-600"></div>
+                <div>
+                    <span class="block text-[11px] font-bold text-slate-400 mb-1">작성된 기록물</span>
+                    <span class="text-[18px] font-black text-emerald-400 flex items-center justify-center gap-1.5" id="record-count-text"><i class="fa-solid fa-pen-nib"></i>0건</span>
+                </div>
             </div>
         </div>
 
-        <h2 class="text-[20px] font-black text-slate-800 tracking-tight flex items-center mb-5 ml-2"><i class="fa-solid fa-list-ul text-slate-400 mr-2"></i>전체 과업 리스트</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-7 md:gap-8" id="dashboard-container"></div>
+        <!-- 🌟 V7 탭(Tab) 필터 UI -->
+        <div class="flex p-1.5 bg-slate-200/50 rounded-[14px] mb-6 shadow-inner border border-slate-200/60 max-w-md">
+            <button id="tab-todo" onclick="setTab('todo')" class="flex-1 py-3 text-[14px] font-bold transition-all text-slate-500 hover:text-slate-700 tab-btn active">🔥 진행중 과업</button>
+            <button id="tab-done" onclick="setTab('done')" class="flex-1 py-3 text-[14px] font-bold transition-all text-slate-500 hover:text-slate-700 tab-btn">🏆 완료 아카이브</button>
+        </div>
+
+        <!-- 메인 리스트 컨테이너 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8" id="dashboard-container"></div>
     </div>
 
-    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl text-[15px] font-bold shadow-2xl opacity-0 transition-opacity pointer-events-none z-50 flex items-center gap-3 whitespace-nowrap border border-slate-700"></div>
+    <!-- 🌟 [모달 1] 텍스트 & 이미지 기록하기 (Record Modal) -->
+    <div id="record-modal" class="modal-overlay fixed inset-0 bg-slate-900/70 z-[100] flex justify-center items-end sm:items-center p-0 sm:p-4">
+        <div class="modal-content bg-white w-full sm:max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl relative overflow-y-auto max-h-[90vh] flex flex-col hide-scrollbar">
+            <div class="flex justify-between items-center mb-5 shrink-0">
+                <h3 class="text-[18px] font-black text-slate-900"><i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>업무 기록 및 수정</h3>
+                <button onclick="closeModal('record-modal')" class="w-8 h-8 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <input type="hidden" id="record-cIdx"><input type="hidden" id="record-tIdx"><input type="hidden" id="record-kId">
+            
+            <div class="mb-4 shrink-0">
+                <label class="block text-[12px] font-bold text-slate-500 mb-1">과업 내용 수정 (필요 시)</label>
+                <input type="text" id="record-text" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-[14px] font-bold text-slate-800 outline-none focus:border-blue-500 transition-colors">
+            </div>
+
+            <div class="flex gap-4 mb-4 shrink-0">
+                <div class="flex-1">
+                    <label class="block text-[12px] font-bold text-slate-500 mb-1">마감일 (D-Day)</label>
+                    <input type="date" id="record-date" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-[14px] font-bold outline-none focus:border-blue-500">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-[12px] font-bold text-slate-500 mb-1">달성 수치</label>
+                    <div class="flex items-center w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-2">
+                        <input type="number" id="record-current" class="w-full text-center bg-transparent font-black text-[15px] text-blue-600 outline-none">
+                        <span class="text-slate-300 font-black mx-1">/</span>
+                        <input type="number" id="record-target" class="w-full text-center bg-transparent font-black text-[15px] text-slate-700 outline-none">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4 shrink-0">
+                <label class="block text-[12px] font-bold text-slate-500 mb-1">📝 진행 과정 / 결과 메모 (선택)</label>
+                <textarea id="record-memo" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-[14px] outline-none focus:border-blue-500 resize-none placeholder-slate-400 transition-colors" placeholder="결과 요약, 아이디어, 관련된 링크 등을 자유롭게 기록하세요."></textarea>
+            </div>
+            
+            <div class="mb-6 shrink-0">
+                <label class="block text-[12px] font-bold text-slate-500 mb-1 flex justify-between">
+                    <span>📸 증빙 자료 / 노션 링크 (선택)</span>
+                </label>
+                <div class="relative w-full">
+                    <input type="text" id="record-img-link" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 pl-10 text-[13px] outline-none focus:border-blue-500 mb-2 transition-colors" placeholder="URL 주소를 적거나 아래 버튼으로 앨범 업로드">
+                    <i class="fa-solid fa-link absolute left-3.5 top-4 text-slate-400"></i>
+                </div>
+                
+                <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-50 transition-colors relative overflow-hidden group" id="img-upload-box">
+                    <input type="file" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="handleImageUpload(event)">
+                    <div id="img-preview-container" class="hidden relative z-0 flex justify-center">
+                        <img id="record-img-preview" src="" class="max-h-36 rounded-lg shadow-sm border border-slate-200">
+                        <button onclick="removeImage(event)" class="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg z-20"><i class="fa-solid fa-trash text-[12px]"></i></button>
+                    </div>
+                    <div id="img-placeholder" class="text-slate-400 group-hover:scale-105 transition-transform py-2">
+                        <i class="fa-solid fa-camera text-2xl mb-1 text-slate-300"></i>
+                        <p class="text-[12px] font-bold">터치하여 앨범에서 사진 첨부</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 mt-auto shrink-0">
+                <button onclick="deleteKpi()" class="px-5 bg-red-50 text-red-500 font-bold rounded-xl hover:bg-red-100 transition-colors"><i class="fa-solid fa-trash"></i></button>
+                <button onclick="saveRecord()" class="flex-1 bg-blue-600 text-white font-black text-[16px] py-4 rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-transform">저장하고 완료하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🌟 [모달 2] 새로운 과업 추가하기 -->
+    <div id="add-modal" class="modal-overlay fixed inset-0 bg-slate-900/70 z-[100] flex justify-center items-center p-4">
+        <div class="modal-content bg-white w-full max-w-md rounded-[28px] p-6 md:p-8 shadow-2xl relative">
+            <h3 class="text-[18px] font-black text-slate-900 mb-5"><i class="fa-solid fa-plus-circle text-emerald-500 mr-2"></i>새로운 퀘스트 추가</h3>
+            <button onclick="closeModal('add-modal')" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full"><i class="fa-solid fa-xmark"></i></button>
+            
+            <label class="block text-[12px] font-bold text-slate-500 mb-1">어느 카테고리에 넣을까요?</label>
+            <select id="add-category" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-[14px] font-bold outline-none focus:border-emerald-500 mb-4 appearance-none"></select>
+            
+            <label class="block text-[12px] font-bold text-slate-500 mb-1">해야 할 일 (과업 내용)</label>
+            <input type="text" id="add-text" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-[14px] outline-none focus:border-emerald-500 mb-4" placeholder="당장 실행할 행동 단위로 적어보세요.">
+            
+            <div class="flex gap-4 mb-6">
+                <div class="flex-1">
+                    <label class="block text-[12px] font-bold text-slate-500 mb-1">목표 달성 수치</label>
+                    <input type="number" id="add-target" value="1" min="1" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-[14px] outline-none focus:border-emerald-500 text-center font-bold">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-[12px] font-bold text-slate-500 mb-1">마감 기한 (D-Day)</label>
+                    <input type="date" id="add-date" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-[14px] font-bold outline-none focus:border-emerald-500">
+                </div>
+            </div>
+            
+            <button onclick="saveNewTask()" class="w-full bg-slate-900 text-white font-black text-[16px] py-4 rounded-xl shadow-lg hover:bg-slate-800 active:scale-95 transition-transform">대시보드에 추가</button>
+        </div>
+    </div>
+
+    <!-- 플로팅 토스트 -->
+    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-800/95 text-white px-6 py-4 rounded-full text-[14px] font-bold shadow-2xl opacity-0 transition-opacity pointer-events-none z-[200] flex items-center gap-2 border border-slate-600"></div>
 
     <script>
         const MY_GAS_URL = "https://script.google.com/macros/s/AKfycbyR8S_78zrgHjrVhgQlMZazpDpoBw7NZZOq0vB7iB0yIrbqo_O5B34Ye3QqZmRP0Qxu/exec";
-        localStorage.setItem('googleSheetApiUrl', MY_GAS_URL);
+        let appData = [];
+        let currentTab = 'todo'; 
 
-        function getFutureDate(daysAdded) {
-            let d = new Date(); d.setDate(d.getDate() + daysAdded);
-            return d.toISOString().split('T')[0]; 
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerHTML = `<i class="fa-solid fa-bell text-blue-400"></i> ${msg}`;
+            t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 2500);
         }
 
-        // 🎯 [현실 기반 재설계] 마이크로 KPI 데이터베이스 (시간적 여유 대폭 확보)
-        const initialData = [
-            {
-                title: '🎓 C1. 학위 및 이직 파이프라인', color: 'blue', icon: 'fa-user-graduate',
-                tasks: [
-                    { title: '학점은행제 행정처리 (102학점)', kpis: [
-                        { text: '오산대 교무처 통화하여 자퇴(제적) 처리 확인', current: 0, target: 1, dueDate: getFutureDate(1) }, // 당장 내일
-                        { text: '정부24 접속 후 오산대 제적증명서 PDF 발급', current: 0, target: 1, dueDate: getFutureDate(2) },
-                        { text: '정부24 접속 후 오산대 성적증명서 PDF 발급', current: 0, target: 1, dueDate: getFutureDate(2) },
-                        { text: '국가평생교육진흥원 4년제 전공 변경 신청', current: 0, target: 1, dueDate: getFutureDate(5) }, // 서류 받고 며칠 뒤
-                        { text: '대기 중인 36학점 수수료 36,000원 결제', current: 0, target: 1, dueDate: getFutureDate(5) },
-                        { text: '잔여 학점 통합하여 최종 102학점 서류 제출', current: 0, target: 1, dueDate: getFutureDate(10) } // 심사 감안하여 10일 뒤
-                    ]},
-                    { title: 'PM 이직 (육휴 보장 공공기관)', kpis: [
-                        { text: '사람인/잡코리아 "산학협력단, 재단" 알림 검색 설정', current: 0, target: 1, dueDate: getFutureDate(3) }, // 세팅은 빨리
-                        { text: '링크드인 프로필: 정부사업 핸들링 성과 3줄 작성', current: 0, target: 3, dueDate: getFutureDate(7) }, // 여유 있게 주말 활용
-                        { text: '육아휴직 1년 보장 타겟 공공기관 공고 스크랩', current: 0, target: 5, dueDate: getFutureDate(14) }, // 꾸준히 모으기
-                        { text: '타겟 기관 지원용 이력서/포트폴리오 PDF 추출', current: 0, target: 1, dueDate: getFutureDate(20) }, 
-                        { text: '타겟 공공기관 입사지원(제출) 완료', current: 0, target: 2, dueDate: getFutureDate(30) } // 포폴 완성 후 한달 뒤 쯤 지원
-                    ]}
-                ]
-            },
-            {
-                title: '📉 C2. 리스크 방어 & 자산 관리', color: 'emerald', icon: 'fa-chart-line',
-                tasks: [
-                    { title: 'KOSPI 인버스 기계적 매도 룰', kpis: [
-                        { text: '증권앱 접속: KOSPI 7150선 도달 시 알림 설정', current: 0, target: 1, dueDate: getFutureDate(1) }, // 즉시 설정
-                        { text: '[상승] KOSPI 7150 돌파 시 1765원 전량 매도', current: 0, target: 1, dueDate: getFutureDate(30) }, // 시장 상황 대기
-                        { text: '[하락] KOSPI 6800 하락 시 50% 분할 매도', current: 0, target: 1, dueDate: getFutureDate(30) },
-                        { text: '매주 수요일 롤오버 방어용 정기 분할 매도', current: 0, target: 4, dueDate: getFutureDate(28) } // 4주에 걸쳐 진행
-                    ]},
-                    { title: '현금흐름 통제 & 라이프 예산', kpis: [
-                        { text: '전월 카드/계좌 지출 내역(112만 원) 엑셀 다운', current: 0, target: 1, dueDate: getFutureDate(3) },
-                        { text: '전월 불필요한 누수 지출 항목 3가지 형광펜 체크', current: 0, target: 3, dueDate: getFutureDate(5) },
-                        { text: '차월 타이트한 예산안(90만 원) 항목별 분배', current: 0, target: 1, dueDate: getFutureDate(7) },
-                        { text: '차량/주택/주식/현금 자산 배분 비율 파이차트화', current: 0, target: 1, dueDate: getFutureDate(14) }, 
-                        { text: '당근마켓, 중고나라 등 마이크로 인컴 1건 실행', current: 0, target: 1, dueDate: getFutureDate(21) } 
-                    ]}
-                ]
-            },
-            {
-                title: '🚀 C3. P2 앱 런칭 & P1 AI', color: 'indigo', icon: 'fa-mobile-screen',
-                tasks: [
-                    { title: 'P2: 감정 분석 일기 앱 베타 (장기 퀘스트)', kpis: [
-                        { text: '감정 전환 오디오 크로스페이드 로직 다이어그램', current: 0, target: 1, dueDate: getFutureDate(10) }, // 기획 먼저
-                        { text: '[Q1 기쁨] 통통 튀는 오디오 스템 루프 제작', current: 0, target: 20, dueDate: getFutureDate(7) }, // 매주 20개씩 분산 제작
-                        { text: '[Q2 분노] 빠르고 긴장감 있는 오디오 스템 제작', current: 0, target: 20, dueDate: getFutureDate(14) },
-                        { text: '[Q3 슬픔] 첼로/느린 피아노 오디오 스템 제작', current: 0, target: 20, dueDate: getFutureDate(21) },
-                        { text: '[Q4 평온] 어쿠스틱 자연 앰비언스 오디오 제작', current: 0, target: 20, dueDate: getFutureDate(28) },
-                        { text: 'iOS TestFlight 앱 빌드 파일 업로드', current: 0, target: 1, dueDate: getFutureDate(35) },
-                        { text: '지인 3명에게 TestFlight 링크 발송 및 피드백', current: 0, target: 3, dueDate: getFutureDate(45) }
-                    ]},
-                    { title: 'P1: 국가 AI 과업 생태계', kpis: [
-                        { text: '위키하우 벤치마킹 AI 스탠다드 목차 5개', current: 0, target: 5, dueDate: getFutureDate(10) }, // 주말 카페에서
-                        { text: 'AI 스탠다드 커뮤니티 Figma 와이어프레임', current: 0, target: 5, dueDate: getFutureDate(17) },
-                        { text: '국가 차원 AI 활용 연구 가설 프롬프트 1장', current: 0, target: 1, dueDate: getFutureDate(24) },
-                        { text: 'AI 도서 출판용 챕터 1 샘플 강의안 작성', current: 0, target: 1, dueDate: getFutureDate(35) }, 
-                        { text: '키프리스 AI 기술 특허 선행기술조사 캡처', current: 0, target: 3, dueDate: getFutureDate(40) } 
-                    ]}
-                ]
-            },
-            {
-                title: '🎨 C4. 아트 & 퍼스널 브랜딩', color: 'purple', icon: 'fa-cube',
-                tasks: [
-                    { title: 'P3: 음악 파이프라인 정리', kpis: [
-                        { text: '비비아나킴 "메르헨" 앨범 피드백 카톡 발송', current: 0, target: 1, dueDate: getFutureDate(2) }, // 쉬운 소통 업무 선처리
-                        { text: 'AI 뮤직다이어리 윤경님 결과물 리뷰 노션 작성', current: 0, target: 1, dueDate: getFutureDate(5) },
-                        { text: '개인 앨범 "피네" 트랙 EQ/믹싱 밸런스 최종 수정', current: 0, target: 1, dueDate: getFutureDate(14) }, // 시간 내서 몰입
-                        { text: '"피네" 최종 마스터링 및 24bit WAV 파일 추출', current: 0, target: 1, dueDate: getFutureDate(20) },
-                        { text: '유튜브 수면/ASMR 1시간 루프 영상 업로드', current: 0, target: 2, dueDate: getFutureDate(30) },
-                        { text: '가요 프로듀싱 오프라인 레슨 출석 및 과제', current: 0, target: 4, dueDate: getFutureDate(30) } // 한 달에 걸쳐 진행
-                    ]},
-                    { title: '3D 외주 & 브랜딩 (Selling Point)', kpis: [
-                        { text: '"제 4의 벽을 깨는 아티스트" 슬로건 인스타 적용', current: 0, target: 1, dueDate: getFutureDate(3) },
-                        { text: '과거 3D 작업물 베스트 렌더링 스크린샷 5장', current: 0, target: 5, dueDate: getFutureDate(7) },
-                        { text: '고객이 내 작업을 구매할 이유(Selling Point) 3문장', current: 0, target: 3, dueDate: getFutureDate(10) },
-                        { text: 'Upwork/Fiverr 영문 프로필 ChatGPT 세팅', current: 0, target: 2, dueDate: getFutureDate(20) },
-                        { text: '데이트 쇼핑몰 / AI 카피 스터디 인스타 피드 기획', current: 0, target: 2, dueDate: getFutureDate(25) }
-                    ]}
-                ]
-            },
-            {
-                title: '❤️ C5. 미국 일정 & 기념일', color: 'rose', icon: 'fa-plane',
-                tasks: [
-                    { title: '기념일 이벤트 및 예약 (긴급)', kpis: [
-                        { text: '12/24 시카고 마지아노스(Maggiano\'s) 앱 예약', current: 0, target: 1, dueDate: getFutureDate(2) }, // 연말 예약은 빨리
-                        { text: '1주년 맞춤 꽃다발 픽업 및 코스 카톡 브리핑', current: 0, target: 2, dueDate: '2024-10-22' }, // 픽스
-                        { text: '여자친구 생일 코스 예약 전화 및 에어팟 픽업', current: 0, target: 2, dueDate: '2024-10-29' }, // 픽스
-                        { text: '아버님 선물: 국순당 백세고 온라인 재고 예약', current: 0, target: 1, dueDate: getFutureDate(20) }, // 여유 있게 11월로 뺌
-                        { text: '부모님 공용: 정관장 황진단 30환 결제', current: 0, target: 1, dueDate: getFutureDate(25) },
-                        { text: '어머님 선물: 전통 민화 스카프/자개거울 결제', current: 0, target: 2, dueDate: getFutureDate(30) }
-                    ]},
-                    { title: '미국 루틴 & 일상 퀘스트', kpis: [
-                        { text: '2주간 사용할 한국 데이트 비용 총 예산 계산', current: 0, target: 1, dueDate: getFutureDate(5) }, // 주말에 예산 계산
-                        { text: '버스 등 자투리 시간 활용 틈틈이 스트레칭 하기', current: 0, target: 14, dueDate: getFutureDate(14) }, // 2주 데일리 루틴
-                        { text: '미국 14일 체류 시 샘과 유지할 타임블록 설계', current: 0, target: 1, dueDate: getFutureDate(45) }, // 출국 임박 시
-                        { text: '시카고 H마트 샤브샤브 부르스타 쇼핑 메모', current: 0, target: 1, dueDate: getFutureDate(45) } 
-                    ]}
-                ]
+        // 🌟 1. 앱 시작 시 구글 시트에서 최신 데이터(2024->수정본) 무조건 불러옴
+        window.onload = async function() {
+            showToast('클라우드에서 최신 데이터를 불러오는 중...');
+            try {
+                const res = await fetch(MY_GAS_URL);
+                const data = await res.json();
+                if(data && data.length > 0) { 
+                    appData = data; 
+                    // 누락 데이터 예외처리 보정
+                    appData.forEach(c => c.tasks.forEach(t => t.kpis.forEach(k => { 
+                        if(!k.id) k.id = 'kpi_' + Math.random().toString(36).substr(2,9);
+                        if(k.memo === undefined) k.memo = "";
+                        if(k.imageUrl === undefined) k.imageUrl = "";
+                    })));
+                    localStorage.setItem('myPmoDataV7', JSON.stringify(appData));
+                    render(); 
+                    showToast('선생님의 시트 데이터가 성공적으로 적용되었습니다!');
+                } else { throw new Error('Data empty'); }
+            } catch(e) { 
+                showToast('네트워크 오류. 저장된 캐시 데이터를 불러옵니다.');
+                appData = JSON.parse(localStorage.getItem('myPmoDataV7')) || [];
+                render();
             }
-        ];
+        };
 
-        // 🌟 강제 업데이트를 위해 키값을 V6_1로 변경했습니다!
-        let appData = JSON.parse(localStorage.getItem('myPmoDataV6_1')) || initialData;
-        let isHideCompleted = false;
-
-        appData.forEach(c => c.tasks.forEach(t => t.kpis.forEach(k => { 
-            if(!k.id) k.id = 'kpi_' + Math.random().toString(36).substr(2,9);
-            if(k.current === undefined) k.current = 0;
-            if(k.target === undefined) k.target = 1;
-        })));
-
-        function showToast(msg, icon = 'fa-check-circle') {
-            const t = document.getElementById('toast');
-            t.innerHTML = `<i class="fa-solid ${icon} text-emerald-400 text-lg"></i> <span>${msg}</span>`;
-            t.style.opacity = '1';
-            setTimeout(() => t.style.opacity = '0', 2500);
+        async function loadFromCloud(manual = false) {
+            if(manual) showToast('새로고침 중...');
+            window.onload();
         }
 
         async function syncToCloud() {
-            const url = localStorage.getItem('googleSheetApiUrl');
-            showToast('동기화 중입니다...', 'fa-spinner fa-spin');
+            showToast('클라우드에 안전하게 저장 중...');
             try { 
-                await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(appData) }); 
-                showToast('클라우드 저장 완료!'); 
-            } catch(e) { showToast('저장 실패: 네트워크 확인', 'fa-xmark'); }
+                await fetch(MY_GAS_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(appData) }); 
+                showToast('클라우드 동기화 완료! 시트를 확인하세요.'); 
+            } catch(e) { showToast('저장 실패. 인터넷을 확인하세요.'); }
         }
 
-        function toggleHide() { 
-            isHideCompleted = document.getElementById('hide-toggle').checked; 
-            render(); 
+        // 탭 전환 시스템
+        function setTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-todo').className = tab === 'todo' ? 'flex-1 py-3 text-[14px] font-bold rounded-lg transition-all bg-white text-blue-600 shadow-sm border border-slate-200/50 tab-btn active' : 'flex-1 py-3 text-[14px] font-bold transition-all text-slate-500 hover:text-slate-700 tab-btn';
+            document.getElementById('tab-done').className = tab === 'done' ? 'flex-1 py-3 text-[14px] font-bold rounded-lg transition-all bg-white text-emerald-600 shadow-sm border border-slate-200/50 tab-btn active' : 'flex-1 py-3 text-[14px] font-bold transition-all text-slate-500 hover:text-slate-700 tab-btn';
+            render();
         }
 
-        function updateKpi(cIdx, tIdx, kIdx, amount) {
-            let kpi = appData[cIdx].tasks[tIdx].kpis.find(k => k.id === kIdx);
-            if(kpi) {
-                kpi.current = Math.max(0, Math.min(kpi.target, kpi.current + amount));
-                localStorage.setItem('myPmoDataV6_1', JSON.stringify(appData));
-                render();
-            }
-        }
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-        function changeDueDate(cIdx, tIdx, kIdx, newDate) {
-            let kpi = appData[cIdx].tasks[tIdx].kpis.find(k => k.id === kIdx);
-            if(kpi && newDate) {
-                kpi.dueDate = newDate;
-                localStorage.setItem('myPmoDataV6_1', JSON.stringify(appData));
-                render();
-                showToast('마감일이 변경되어 재정렬되었습니다!', 'fa-calendar-check');
-            }
-        }
-
-        function formatText(text) {
-            return text.replace(/([0-9,]+(?:건|개|명|장|회|%|곳|종|원|학점|시간|일|문장|부|곡|줄|환)?)/g, '<span class="num-highlight">$1</span>');
-        }
-
-        function getControlBtn(kpi, isDone, cIdx, tIdx, size = 'normal') {
-            if(kpi.target === 1) {
-                let btnCls = size === 'small' ? 'w-8 h-8 rounded-xl' : 'w-10 h-10 rounded-[14px]';
-                let iconCls = size === 'small' ? 'text-[14px]' : 'text-[20px]';
-                return `
-                    <div class="${btnCls} flex items-center justify-center cursor-pointer transition-all shadow-sm border-[2px] ${isDone ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-300 hover:border-slate-400'}" onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${isDone ? -1 : 1})">
-                        <i class="fa-solid fa-check text-white ${iconCls} transition-transform ${isDone ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}"></i>
-                    </div>`;
-            } else {
-                let pCls = size === 'small' ? 'p-1 rounded-xl' : 'p-1.5 rounded-2xl';
-                let btnCls = size === 'small' ? 'w-7 h-7 rounded-lg' : 'w-8 h-8 rounded-xl';
-                let textCls = size === 'small' ? 'w-10 text-[13px]' : 'w-12 text-[14px]';
-                return `
-                    <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 shadow-sm no-select ${pCls}">
-                        <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', -1)" class="${btnCls} bg-white hover:bg-slate-200 text-slate-500 shadow-sm flex items-center justify-center active:scale-95 transition-all"><i class="fa-solid fa-minus text-[11px]"></i></button>
-                        <span class="font-black text-slate-800 text-center tracking-tighter ${textCls}">${kpi.current}<span class="text-slate-400 font-normal mx-0.5">/</span>${kpi.target}</span>
-                        <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${kpi.target >= 20 ? 5 : 1})" class="${btnCls} bg-slate-800 hover:bg-slate-700 text-white shadow-sm flex items-center justify-center active:scale-95 transition-all"><i class="fa-solid fa-plus text-[11px]"></i></button>
-                    </div>`;
-            }
-        }
-
-        function getDdayBadge(dateString, isDone, cIdx, tIdx, kId, style = 'normal') {
-            if(isDone) return '<span class="text-slate-400 text-[12px] font-bold bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 mt-2.5 inline-flex items-center"><i class="fa-solid fa-check mr-1.5"></i>완료됨</span>';
+        // 🌟 2. 텍스트 & 이미지 기록(Log) 저장 로직
+        function openRecordModal(cIdx, tIdx, kId) {
+            const kpi = appData[cIdx].tasks[tIdx].kpis.find(k => k.id === kId);
+            document.getElementById('record-cIdx').value = cIdx;
+            document.getElementById('record-tIdx').value = tIdx;
+            document.getElementById('record-kId').value = kId;
             
+            document.getElementById('record-text').value = kpi.text;
+            document.getElementById('record-date').value = kpi.dueDate || '';
+            document.getElementById('record-current').value = kpi.current;
+            document.getElementById('record-target').value = kpi.target;
+            document.getElementById('record-memo').value = kpi.memo || '';
+            
+            // 이미지/링크 분기 처리 세팅
+            const imgPreview = document.getElementById('record-img-preview');
+            const previewContainer = document.getElementById('img-preview-container');
+            const placeholder = document.getElementById('img-placeholder');
+            const linkInput = document.getElementById('record-img-link');
+            
+            linkInput.value = ""; imgPreview.src = "";
+            previewContainer.classList.add('hidden'); placeholder.classList.remove('hidden');
+
+            if(kpi.imageUrl && kpi.imageUrl.startsWith('data:image')) {
+                imgPreview.src = kpi.imageUrl;
+                previewContainer.classList.remove('hidden'); placeholder.classList.add('hidden');
+            } else if(kpi.imageUrl) {
+                linkInput.value = kpi.imageUrl;
+            }
+            
+            openModal('record-modal');
+        }
+
+        // 이미지 저용량 리사이징 (Base64 변환)
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 400; // 구글 시트 용량 초과 방지 최적화
+                    let scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const base64Str = canvas.toDataURL('image/jpeg', 0.6); // 60% 퀄리티 압축
+                    
+                    document.getElementById('record-img-preview').src = base64Str;
+                    document.getElementById('img-preview-container').classList.remove('hidden');
+                    document.getElementById('img-placeholder').classList.add('hidden');
+                    document.getElementById('record-img-link').value = ""; // 텍스트 링크 초기화
+                }
+            };
+        }
+
+        function removeImage(e) {
+            e.stopPropagation();
+            document.getElementById('record-img-preview').src = "";
+            document.getElementById('img-preview-container').classList.add('hidden');
+            document.getElementById('img-placeholder').classList.remove('hidden');
+            document.getElementById('record-img-input').value = "";
+        }
+
+        function saveRecord() {
+            const cIdx = document.getElementById('record-cIdx').value;
+            const tIdx = document.getElementById('record-tIdx').value;
+            const kId = document.getElementById('record-kId').value;
+            
+            let kpi = appData[cIdx].tasks[tIdx].kpis.find(k => k.id === kId);
+            kpi.text = document.getElementById('record-text').value.trim();
+            kpi.dueDate = document.getElementById('record-date').value;
+            kpi.current = Math.max(0, parseInt(document.getElementById('record-current').value) || 0);
+            kpi.target = Math.max(1, parseInt(document.getElementById('record-target').value) || 1);
+            kpi.memo = document.getElementById('record-memo').value.trim();
+            
+            const imgSrc = document.getElementById('record-img-preview').src;
+            const linkVal = document.getElementById('record-img-link').value.trim();
+            kpi.imageUrl = imgSrc.startsWith('data:image') ? imgSrc : linkVal; // 사진이 있으면 사진, 없으면 링크 저장
+
+            localStorage.setItem('myPmoDataV7', JSON.stringify(appData));
+            closeModal('record-modal'); 
+            render(); 
+            syncToCloud();
+            if(kpi.current >= kpi.target) showToast('과업이 아카이브로 이동되었습니다! 🎉');
+            else showToast('기록이 저장되었습니다.');
+        }
+
+        function deleteKpi() {
+            if(confirm("이 과업을 완전히 삭제하시겠습니까?")) {
+                const cIdx = document.getElementById('record-cIdx').value;
+                const tIdx = document.getElementById('record-tIdx').value;
+                const kId = document.getElementById('record-kId').value;
+                appData[cIdx].tasks[tIdx].kpis = appData[cIdx].tasks[tIdx].kpis.filter(k => k.id !== kId);
+                localStorage.setItem('myPmoDataV7', JSON.stringify(appData));
+                closeModal('record-modal'); render(); syncToCloud();
+            }
+        }
+
+        // 🌟 3. 새로운 과업 생성
+        function openAddModal() {
+            if(appData.length === 0) return alert("데이터를 먼저 로드하세요.");
+            const select = document.getElementById('add-category');
+            select.innerHTML = '';
+            appData.forEach((cat, idx) => { select.innerHTML += `<option value="${idx}">${cat.title}</option>`; });
+            
+            let tmr = new Date(); tmr.setDate(tmr.getDate() + 7);
+            document.getElementById('add-date').value = tmr.toISOString().split('T')[0];
+            document.getElementById('add-text').value = '';
+            document.getElementById('add-target').value = 1;
+            
+            openModal('add-modal');
+        }
+
+        function saveNewTask() {
+            const cIdx = document.getElementById('add-category').value;
+            const text = document.getElementById('add-text').value.trim();
+            const target = parseInt(document.getElementById('add-target').value) || 1;
+            const date = document.getElementById('add-date').value;
+
+            if(!text) return alert("추가할 내용을 입력하세요.");
+            if(!appData[cIdx].tasks[0]) appData[cIdx].tasks.push({ title: "새로운 업무", kpis: []});
+
+            appData[cIdx].tasks[0].kpis.push({
+                id: 'kpi_' + Math.random().toString(36).substr(2,9),
+                text: text, current: 0, target: target, dueDate: date, memo: "", imageUrl: "", priority: "Medium"
+            });
+
+            localStorage.setItem('myPmoDataV7', JSON.stringify(appData));
+            closeModal('add-modal'); render(); syncToCloud();
+            showToast('성공적으로 대시보드에 추가되었습니다!');
+        }
+
+        // 유틸 함수들
+        function formatText(text) { return text.replace(/([0-9,]+(?:건|개|명|장|회|%|곳|종|원|학점|시간|일|문장|부|곡|줄|환)?)/g, '<span class="num-highlight">$1</span>'); }
+        function parseLinks(text) { return text.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" class="parsed-link" onclick="event.stopPropagation()">${url}</a>`); }
+
+        function getDdayBadge(dateString) {
+            if(!dateString) return '';
             const today = new Date(); today.setHours(0,0,0,0);
             const due = new Date(dateString);
             const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
             
-            let cls = 'text-slate-600 bg-slate-100 border-slate-200 hover:bg-slate-200';
-            let label = `D-${diffDays}`;
-            let icon = '<i class="fa-regular fa-calendar text-slate-500"></i>';
+            let color = diffDays < 0 ? 'text-red-600 bg-red-50 border-red-200' : (diffDays === 0 ? 'text-white bg-red-500 border-red-600 shadow-md animate-pulse' : (diffDays <= 3 ? 'text-orange-600 bg-orange-50 border-orange-200' : 'text-slate-500 bg-slate-50 border-slate-200'));
+            let txt = diffDays < 0 ? `초과 D+${Math.abs(diffDays)}` : (diffDays === 0 ? '오늘마감!' : `D-${diffDays}`);
+            const mm = String(due.getMonth()+1).padStart(2,'0'); const dd = String(due.getDate()).padStart(2,'0');
             
-            if (diffDays < 0) { 
-                cls = 'text-red-700 bg-red-50 border-red-200'; label = `초과 D+${Math.abs(diffDays)}`; icon = '<i class="fa-solid fa-triangle-exclamation text-red-500"></i>';
-            } else if (diffDays === 0) { 
-                cls = 'text-white bg-red-500 border-red-600 shadow-md animate-pulse'; label = '오늘 마감!'; icon = '<i class="fa-solid fa-fire text-white"></i>';
-            } else if (diffDays <= 3) { 
-                cls = 'text-orange-700 bg-orange-50 border-orange-200'; icon = '<i class="fa-regular fa-clock text-orange-500"></i>';
-            }
-
-            const mm = String(due.getMonth()+1).padStart(2,'0');
-            const dd = String(due.getDate()).padStart(2,'0');
-            
-            let wrapCls = style === 'compact' ? 'mt-1.5 px-2 py-0.5 rounded-lg' : 'mt-3.5 px-3 py-1.5 rounded-xl';
-            let txtCls = style === 'compact' ? 'text-[11px]' : 'text-[13px]';
-
-            return `
-                <div class="relative inline-flex items-center gap-2 cursor-pointer group border transition-colors shadow-sm ${cls} ${wrapCls}">
-                    <span class="${txtCls} font-black flex items-center gap-1.5 pointer-events-none">${icon}${label}</span>
-                    <div class="h-3 w-[1.5px] bg-current opacity-20 pointer-events-none mx-0.5"></div>
-                    <input type="date" value="${dateString}" onchange="changeDueDate(${cIdx}, ${tIdx}, '${kId}', this.value)" class="date-input-overlay">
-                    <span class="text-[12px] font-bold opacity-80 pointer-events-none flex items-center">${mm}/${dd}</span>
-                </div>`;
+            return `<span class="text-[10px] font-black ${color} px-2 py-0.5 rounded border flex items-center gap-1 shrink-0"><i class="fa-regular fa-calendar"></i>${mm}/${dd} (${txt})</span>`;
         }
 
+        function renderMediaArchive(url) {
+            if (!url) return '';
+            if (url.startsWith('data:image') || url.match(/\.(jpeg|jpg|gif|png|webp)/i)) {
+                return `<img src="${url}" class="w-full max-h-56 object-cover rounded-xl mt-3 border border-slate-200 shadow-sm" onerror="this.style.display='none'">`;
+            } else {
+                return `<a href="${url}" target="_blank" class="flex items-center mt-3 bg-indigo-50 text-indigo-600 px-3.5 py-2.5 rounded-xl text-[13px] font-bold truncate hover:bg-indigo-100 transition-colors border border-indigo-100" onclick="event.stopPropagation()"><i class="fa-solid fa-arrow-up-right-from-square mr-2 opacity-50"></i>관련 링크 열기</a>`;
+            }
+        }
+
+        // 🌟 메인 렌더링
         function render() {
+            if(appData.length === 0) return;
             const grid = document.getElementById('dashboard-container');
-            const progressPanel = document.getElementById('category-progress-container');
-            const urgentPanel = document.getElementById('urgent-tasks-container');
-            
-            grid.innerHTML = ''; progressPanel.innerHTML = ''; urgentPanel.innerHTML = '';
-            
-            let totalCurrent = 0, totalTarget = 0;
-            let urgentTasks = [];
-            const today = new Date(); today.setHours(0,0,0,0);
+            grid.innerHTML = '';
+            let totalCurrent = 0, totalTarget = 0, todoCount = 0, doneCount = 0, recordCount = 0;
 
             appData.forEach((cat, cIdx) => {
                 let catCurrent = 0, catTarget = 0;
                 let tasksHtml = '';
-                let hasVisibleTask = false;
-
+                
                 cat.tasks.forEach((task, tIdx) => {
-                    let kpisHtml = ''; let visibleCount = 0;
+                    let kpisHtml = '';
+                    let sortedKpis = [...task.kpis].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
-                    let sortedKpis = [...task.kpis].sort((a, b) => {
-                        const aDone = a.current >= a.target; const bDone = b.current >= b.target;
-                        if(aDone !== bDone) return aDone ? 1 : -1; 
-                        return new Date(a.dueDate) - new Date(b.dueDate);
-                    });
-
-                    sortedKpis.forEach((kpi) => {
+                    sortedKpis.forEach(kpi => {
                         catTarget += kpi.target; totalTarget += kpi.target;
                         catCurrent += kpi.current; totalCurrent += kpi.current;
                         
                         let isDone = kpi.current >= kpi.target;
+                        if(isDone) doneCount++; else todoCount++;
                         
-                        // 🚨 마감 임박 보드(D-7) 업데이트
-                        if(!isDone) {
-                            const diffDays = Math.ceil((new Date(kpi.dueDate) - today) / (1000 * 60 * 60 * 24));
-                            if(diffDays <= 7) {
-                                urgentTasks.push({ kpi, cIdx, tIdx, diffDays, cat });
-                            }
-                        }
+                        let hasRecord = (kpi.memo && kpi.memo.trim() !== '') || (kpi.imageUrl && kpi.imageUrl.trim() !== '');
+                        if(hasRecord) recordCount++;
 
-                        if(isHideCompleted && isDone) return;
-                        visibleCount++;
+                        // 탭 시스템 분리
+                        if(currentTab === 'todo' && isDone) return;
+                        if(currentTab === 'done' && !isDone) return;
 
-                        kpisHtml += `
-                            <div class="task-card flex flex-col sm:flex-row items-start gap-4 p-5 mb-4 rounded-3xl bg-white border border-slate-200/80 shadow-sm ${isDone ? 'opacity-50 grayscale bg-slate-50' : ''}">
-                                <div class="shrink-0 mt-0.5">${getControlBtn(kpi, isDone, cIdx, tIdx, 'normal')}</div>
-                                <div class="flex-1 min-w-0 w-full">
-                                    <div class="text-[16px] md:text-[17px] leading-snug break-keep ${isDone ? 'text-slate-400 line-through' : 'text-slate-900 font-bold'}">${isDone ? kpi.text : formatText(kpi.text)}</div>
-                                    ${getDdayBadge(kpi.dueDate, isDone, cIdx, tIdx, kpi.id, 'normal')}
+                        let proofIcon = hasRecord ? `<span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-100 ml-1.5 shrink-0 whitespace-nowrap"><i class="fa-solid fa-paperclip mr-1"></i>기록됨</span>` : '';
+
+                        if (currentTab === 'todo') {
+                            // [🔥 해야 할 일 카드 UI]
+                            kpisHtml += `
+                                <div onclick="openRecordModal(${cIdx}, ${tIdx}, '${kpi.id}')" class="task-card bg-white p-4 mb-3.5 rounded-[20px] flex flex-col justify-between gap-3 shadow-sm hover:border-blue-300 group">
+                                    <div class="flex justify-between items-start w-full">
+                                        <div class="text-[15px] font-bold text-slate-800 leading-snug break-keep flex-1 pr-3">${formatText(kpi.text)} ${proofIcon}</div>
+                                        <div class="shrink-0 bg-slate-100 text-slate-700 text-[12px] font-black px-2 py-1 rounded-lg border border-slate-200 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">${kpi.current}/${kpi.target}</div>
+                                    </div>
+                                    <div class="flex justify-between items-end w-full">
+                                        ${getDdayBadge(kpi.dueDate)}
+                                        <span class="text-[11px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-md shadow-sm group-hover:text-blue-500 transition-colors"><i class="fa-solid fa-pen mr-1"></i>작성하기</span>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        } else {
+                            // [🏆 완료 아카이브 카드 UI]
+                            let memoHtml = kpi.memo ? `<div class="bg-blue-50/60 p-3.5 rounded-xl mt-3 text-[13px] text-slate-700 leading-relaxed border border-blue-100 shadow-inner"><i class="fa-solid fa-quote-left text-blue-300 mr-2"></i>${parseLinks(kpi.memo.replace(/\n/g, '<br>'))}</div>` : '';
+                            kpisHtml += `
+                                <div class="task-card bg-slate-50 p-5 mb-4 rounded-[24px] border border-slate-200 shadow-sm" onclick="openRecordModal(${cIdx}, ${tIdx}, '${kpi.id}')">
+                                    <div class="flex justify-between items-start gap-3">
+                                        <div class="flex-1">
+                                            <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 mb-2.5 inline-block shadow-sm"><i class="fa-solid fa-check mr-1"></i>목표 달성 완료</span>
+                                            <div class="text-[15px] font-bold text-slate-500 line-through decoration-slate-300 break-keep">${kpi.text}</div>
+                                        </div>
+                                        <button class="shrink-0 w-8 h-8 bg-white border border-slate-200 text-slate-400 rounded-full flex items-center justify-center shadow-sm hover:text-blue-500"><i class="fa-solid fa-pen-to-square text-[11px]"></i></button>
+                                    </div>
+                                    ${renderMediaArchive(kpi.imageUrl)}
+                                    ${memoHtml}
+                                </div>
+                            `;
+                        }
                     });
 
-                    if(visibleCount > 0) {
-                        hasVisibleTask = true;
-                        tasksHtml += `
-                            <div class="mb-10 last:mb-0 bg-slate-50/70 p-3 md:p-5 rounded-[32px] border border-slate-100">
-                                <h3 class="text-[15px] font-black text-slate-800 mb-4 tracking-tight flex items-center px-1"><span class="w-2.5 h-2.5 rounded-full bg-${cat.color}-500 mr-2.5"></span>${task.title}</h3>
-                                <div>${kpisHtml}</div>
-                            </div>
-                        `;
+                    if(kpisHtml) {
+                        tasksHtml += `<div class="mb-8 last:mb-0 bg-slate-50/70 p-4 rounded-[28px] border border-slate-100 relative"><h3 class="text-[14px] font-black text-slate-600 tracking-tight mb-4 pl-1 flex items-center"><div class="w-2 h-2 bg-${cat.color}-500 rounded-full mr-2 shadow-sm"></div>${task.title}</h3><div>${kpisHtml}</div></div>`;
                     }
                 });
 
-                let catPercent = catTarget === 0 ? 0 : Math.floor((catCurrent / catTarget) * 100);
-                let shortTitle = cat.title.split(' ').slice(1).join(' ');
-                
-                progressPanel.innerHTML += `
-                    <div class="bg-slate-800/40 p-3.5 rounded-2xl border border-slate-700/50">
-                        <div class="flex justify-between items-end mb-2.5 px-1">
-                            <span class="text-[13px] font-bold text-slate-300 flex items-center"><i class="fa-solid ${cat.icon} text-${cat.color}-400 mr-2 w-4 text-center"></i>${shortTitle}</span>
-                            <span class="text-[14px] font-black text-white">${catPercent}%</span>
-                        </div>
-                        <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
-                            <div class="bg-${cat.color}-500 h-2 rounded-full progress-bar" style="width: ${catPercent}%"></div>
-                        </div>
-                    </div>
-                `;
-
-                if(isHideCompleted && !hasVisibleTask) {
-                    tasksHtml = `<div class="flex flex-col items-center justify-center py-24 text-slate-300"><i class="fa-solid fa-clipboard-check text-6xl text-${cat.color}-400/50 mb-5"></i><p class="font-bold text-[16px] text-slate-400">모든 퀘스트 클리어!</p></div>`;
-                }
-
-                grid.innerHTML += `
-                    <div class="bg-white rounded-[36px] border border-slate-200 overflow-hidden flex flex-col h-full shadow-sm">
-                        <div class="px-7 md:px-8 py-6 flex justify-between items-center relative border-b border-slate-100">
-                            <h2 class="text-[20px] font-black text-slate-900 tracking-tight flex items-center truncate"><i class="fa-solid ${cat.icon} text-${cat.color}-500 w-8 mr-1.5 text-xl"></i>${cat.title.split(' ')[0]} ${shortTitle}</h2>
-                        </div>
-                        <div class="w-full bg-slate-100 h-2"><div class="bg-${cat.color}-500 h-2 progress-bar shadow-sm" style="width: ${catPercent}%"></div></div>
-                        <div class="px-4 md:px-6 pt-6 pb-8 flex-1">${tasksHtml}</div>
-                    </div>
-                `;
-            });
-
-            urgentTasks.sort((a, b) => a.diffDays - b.diffDays);
-            document.getElementById('urgent-count').innerText = `${urgentTasks.length}건 대기중`;
-            
-            if(urgentTasks.length === 0) {
-                urgentPanel.innerHTML = `<div class="flex flex-col items-center justify-center h-full min-h-[180px] text-slate-400"><i class="fa-solid fa-mug-hot text-4xl mb-4 text-red-200"></i><p class="font-bold text-sm text-center">일주일 내로 마감할 퀘스트가 없습니다!<br>여유를 즐기세요.</p></div>`;
-            } else {
-                urgentTasks.forEach(item => {
-                    urgentPanel.innerHTML += `
-                        <div class="flex items-center gap-3.5 bg-red-50/40 p-4 rounded-2xl border border-red-100 hover:bg-red-50 hover:border-red-200 transition-colors">
-                            <div class="shrink-0">${getControlBtn(item.kpi, false, item.cIdx, item.tIdx, 'small')}</div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-[15px] font-bold text-slate-900 leading-snug break-keep">${formatText(item.kpi.text)}</div>
-                                <div class="flex flex-wrap items-center gap-2 mt-2">
-                                    ${getDdayBadge(item.kpi.dueDate, false, item.cIdx, item.tIdx, item.kpi.id, 'compact')}
-                                    <span class="text-[11px] font-bold text-slate-500 mt-1.5 flex items-center bg-white px-2 py-1 rounded-md border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-${item.cat.color}-400 mr-1.5"></span>${item.cat.title.split(' ')[1]}</span>
-                                </div>
+                if(tasksHtml !== '') {
+                    let catPercent = catTarget === 0 ? 0 : Math.floor((catCurrent / catTarget) * 100);
+                    grid.innerHTML += `
+                        <div class="bg-white rounded-[36px] border border-slate-200 overflow-hidden flex flex-col h-full shadow-sm">
+                            <div class="px-6 md:px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+                                <h2 class="text-[18px] md:text-[20px] font-black text-slate-900 tracking-tight flex items-center truncate"><i class="fa-solid ${cat.icon} text-${cat.color}-500 w-8 text-xl"></i>${cat.title}</h2>
+                                <span class="text-[13px] font-black text-white bg-slate-800 px-3.5 py-1.5 rounded-xl shadow-sm">${catPercent}%</span>
                             </div>
+                            <div class="w-full bg-slate-100 h-1.5"><div class="bg-${cat.color}-500 h-1.5 progress-bar" style="width: ${catPercent}%"></div></div>
+                            <div class="p-4 md:p-6 flex-1">${tasksHtml}</div>
                         </div>
                     `;
-                });
-            }
+                }
+            });
+
+            if(grid.innerHTML === '') grid.innerHTML = `<div class="col-span-full py-20 text-center text-slate-400 font-bold flex flex-col items-center"><i class="fa-solid fa-mug-hot text-5xl mb-4 opacity-30"></i>${currentTab === 'todo' ? '해야 할 과업이 없습니다. 휴식을 즐기세요!' : '아직 완료 및 기록된 과업이 없습니다.'}</div>`;
 
             let overall = totalTarget === 0 ? 0 : Math.floor((totalCurrent / totalTarget) * 100);
             document.getElementById('total-progress-text').innerText = `${overall}%`;
-            document.getElementById('total-count-text').innerText = `${totalCurrent} / ${totalTarget}`;
+            document.getElementById('todo-count-text').innerText = todoCount;
+            document.getElementById('done-count-text').innerText = doneCount;
+            document.getElementById('record-count-text').innerHTML = `<i class="fa-solid fa-pen-nib mr-1.5 opacity-80"></i>${recordCount}건`;
             document.getElementById('total-progress').style.width = `${overall}%`;
         }
-
-        render();
     </script>
 </body>
 </html>
