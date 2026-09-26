@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quantitative WBS Dashboard V3.0</title>
+    <title>Quantitative WBS Dashboard V3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,7 +21,7 @@
 </head>
 <body class="text-slate-800 pb-24">
 
-    <!-- 🌟 상단 고정 헤더 -->
+    <!-- 상단 고정 헤더 -->
     <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 py-3 md:px-6 mb-6">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
             <div class="flex justify-between items-center w-full md:w-auto">
@@ -47,14 +47,14 @@
                     <button onclick="loadFromCloud()" class="bg-white text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg text-[12px] font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition flex items-center">
                         <i class="fa-solid fa-cloud-arrow-down mr-1.5"></i> 불러오기
                     </button>
-                    <button onclick="setGoogleUrl()" class="hidden md:block text-slate-400 hover:text-blue-600 px-2 bg-slate-100 rounded-lg" title="구글 앱스 스크립트 주소 연동"><i class="fa-solid fa-gear"></i></button>
+                    <button onclick="setGoogleUrl()" class="hidden md:block text-slate-400 hover:text-blue-600 px-2 bg-slate-100 rounded-lg"><i class="fa-solid fa-gear"></i></button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="max-w-7xl mx-auto px-4 md:px-6">
-        <!-- 🌟 총괄 정량 달성률 바 -->
+        <!-- 총괄 정량 달성률 바 -->
         <div class="w-full bg-slate-900 p-5 md:p-6 rounded-2xl shadow-xl mb-8 text-white flex flex-col justify-center border-b-4 border-emerald-500">
             <div class="flex justify-between items-end mb-3">
                 <div>
@@ -78,7 +78,12 @@
     <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-800/95 backdrop-blur-sm text-white px-5 py-3 rounded-full text-[14px] font-bold shadow-2xl opacity-0 transition-opacity pointer-events-none z-50 flex items-center gap-2 whitespace-nowrap border border-slate-600"></div>
 
     <script>
-        // 🎯 극한으로 쪼갠 정량 지표 데이터베이스 (current, target, unit 완벽 세팅)
+        // 🌟 사용자 맞춤형 URL 자동 주입
+        const MY_GAS_URL = "https://script.google.com/macros/s/AKfycbyR8S_78zrgHjrVhgQlMZazpDpoBw7NZZOq0vB7iB0yIrbqo_O5B34Ye3QqZmRP0Qxu/exec";
+        if (!localStorage.getItem('googleSheetApiUrl')) {
+            localStorage.setItem('googleSheetApiUrl', MY_GAS_URL);
+        }
+
         const initialData = [
             {
                 title: '🎓 C1. 커리어 & 학위', color: 'blue', icon: 'fa-user-graduate',
@@ -169,7 +174,6 @@
         let appData = JSON.parse(localStorage.getItem('myPmoDataV3')) || initialData;
         let isHideCompleted = false;
 
-        // 고유 ID 주입 및 데이터 구조 체크
         appData.forEach(c => c.tasks.forEach(t => t.kpis.forEach(k => { 
             if(!k.id) k.id = 'kpi_' + Math.random().toString(36).substr(2,9);
             if(k.current === undefined) k.current = 0;
@@ -183,25 +187,24 @@
             setTimeout(() => t.style.opacity = '0', 2500);
         }
 
-        // 구글 스크립트 설정
         function setGoogleUrl() {
             const currentUrl = localStorage.getItem('googleSheetApiUrl') || '';
-            const newUrl = prompt('구글 Apps Script 웹앱 URL을 붙여넣으세요:\n(이 주소를 넣으면 시트와 데이터가 연동됩니다)', currentUrl);
+            const newUrl = prompt('구글 Apps Script 웹앱 URL을 입력하세요:', currentUrl);
             if(newUrl !== null) { 
                 localStorage.setItem('googleSheetApiUrl', newUrl.trim()); 
-                showToast('URL 연동 완료! 시트 저장/불러오기가 가능합니다.', 'fa-link'); 
+                showToast('URL 변경이 완료되었습니다.', 'fa-link'); 
             }
         }
 
         async function syncToCloud() {
             const url = localStorage.getItem('googleSheetApiUrl');
             if(!url) return setGoogleUrl();
-            showToast('스프레드시트에 표를 업데이트 중...', 'fa-spinner fa-spin');
+            showToast('스프레드시트에 동기화 중...', 'fa-spinner fa-spin');
             try { 
                 await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(appData) }); 
-                showToast('구글 시트 저장 완료! 문서를 확인해보세요.', 'fa-check'); 
+                showToast('시트에 저장 완료!', 'fa-check'); 
             } 
-            catch(e) { showToast('네트워크 오류로 저장에 실패했습니다.', 'fa-xmark'); }
+            catch(e) { showToast('저장 실패. 인터넷 연결을 확인하세요.', 'fa-xmark'); }
         }
 
         async function loadFromCloud() {
@@ -214,7 +217,7 @@
                     appData = data; localStorage.setItem('myPmoDataV3', JSON.stringify(appData)); render(); 
                     showToast('시트에서 성공적으로 불러왔습니다.', 'fa-cloud-arrow-down'); 
                 }
-            } catch(e) { showToast('불러오기 실패. URL을 확인하세요.', 'fa-xmark'); }
+            } catch(e) { showToast('불러오기 실패. 시트에 데이터가 없거나 URL 오류입니다.', 'fa-xmark'); }
         }
 
         function toggleHide() { 
@@ -222,7 +225,6 @@
             render(); 
         }
 
-        // 🟢 정량 수치 업데이트 기능
         function updateKpi(cIdx, tIdx, kIdx, amount) {
             let kpi = appData[cIdx].tasks[tIdx].kpis[kIdx];
             kpi.current = Math.max(0, Math.min(kpi.target, kpi.current + amount));
@@ -240,7 +242,6 @@
             return badges[p] || badges['Low'];
         }
 
-        // 숫자가 포함된 텍스트 자동 하이라이트
         function formatText(text) {
             return text.replace(/([0-9,]+(?:건|개|명|장|회|%|곳|종|원|학점|시간|일|문장|부|곡)?)/g, '<span class="num-highlight">$1</span>');
         }
@@ -267,7 +268,6 @@
                         if(isHideCompleted && isDone) return;
                         visibleCount++;
 
-                        // 🎯 UI 분기: 목표가 1개면 '체크버튼', 2개 이상이면 '+/- 증감 버튼'
                         let controlHtml = '';
                         if(kpi.target === 1) {
                             controlHtml = `
