@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Micro KPI Dashboard V5</title>
+    <title>Strategic KPI Dashboard V6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { background-color: #f3f4f6; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .progress-bar { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        body { background-color: #f1f5f9; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .progress-bar { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -21,23 +21,23 @@
         /* 텍스트 내 숫자 자동 강조 */
         .num-highlight { font-weight: 900; color: #2563eb; background-color: #eff6ff; padding: 2px 6px; border-radius: 6px; margin: 0 2px; }
         
-        /* 카드 UI 부드러운 호버 및 터치 액션 */
+        /* 카드 UI 터치 액션 */
         .task-card { transition: all 0.2s ease; border: 2px solid transparent; }
         .task-card:active { transform: scale(0.98); }
         
-        /* 🌟 달력(Date) 인풋을 뱃지 위에 투명하게 덮어씌움 */
+        /* 캘린더 인풋 오버레이 (클릭 영역) */
         .date-input-overlay { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
         .date-input-overlay::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; }
     </style>
 </head>
 <body class="text-slate-800 pb-28">
 
-    <!-- 🌟 시원하고 넓은 상단 헤더 -->
+    <!-- 🌟 상단 고정 헤더 -->
     <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-slate-200 px-5 py-4 mb-6 shadow-sm">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="w-full flex justify-between items-center md:w-auto">
                 <h1 class="text-[22px] font-black text-slate-900 tracking-tight flex items-center">
-                    <i class="fa-solid fa-list-check text-blue-600 mr-2.5"></i>Micro WBS
+                    <i class="fa-solid fa-rocket text-blue-600 mr-2.5"></i>Master PMO
                 </h1>
             </div>
             
@@ -60,34 +60,61 @@
     </div>
 
     <div class="max-w-7xl mx-auto px-4 md:px-6">
-        <!-- 🌟 가시성 극대화 총괄 진행률 보드 -->
-        <div class="w-full bg-slate-900 p-7 md:p-8 rounded-[32px] shadow-xl mb-10 text-white relative overflow-hidden">
-            <div class="absolute -top-10 -right-10 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl"></div>
+        
+        <!-- 🌟 V6 신규: 전략 대시보드 (Executive Summary) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
             
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 relative z-10 gap-3">
-                <div>
-                    <span class="block text-[13px] font-black text-slate-400 tracking-widest mb-1.5 uppercase">Overall Completion</span>
-                    <span class="text-6xl font-black text-white tracking-tighter drop-shadow-md" id="total-progress-text">0%</span>
+            <!-- 1) 마감 임박 (D-7 이내) 투두 리스트 보드 -->
+            <div class="lg:col-span-2 bg-white p-6 md:p-8 rounded-[32px] shadow-sm border border-red-200 relative overflow-hidden flex flex-col h-full">
+                <div class="absolute -top-10 -right-10 w-48 h-48 bg-red-500 opacity-5 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="flex justify-between items-center mb-5 relative z-10 border-b border-red-50 pb-3">
+                    <h2 class="text-[18px] md:text-[20px] font-black text-slate-900 tracking-tight flex items-center">
+                        <i class="fa-solid fa-fire text-red-500 mr-2.5 text-xl animate-pulse"></i>마감 임박 퀘스트 (D-7)
+                    </h2>
+                    <span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-lg text-[13px] border border-red-200 shadow-sm" id="urgent-count">0건</span>
                 </div>
-                <div class="bg-slate-800/80 px-4 py-2.5 rounded-2xl border border-slate-700 flex flex-col items-end">
-                    <span class="block text-[12px] font-bold text-slate-400 mb-0.5">총 달성 퀘스트 수치</span>
-                    <span class="text-[18px] font-black text-blue-400" id="total-count-text">0 / 0</span>
+                <!-- 핫라인 퀘스트 리스트가 렌더링될 곳 -->
+                <div id="urgent-tasks-container" class="relative z-10 flex-1 overflow-y-auto pr-1 max-h-[300px] lg:max-h-[350px] space-y-3 hide-scrollbar">
                 </div>
             </div>
-            <div class="w-full bg-slate-800 rounded-full h-3.5 relative z-10 overflow-hidden shadow-inner p-0.5 border border-slate-700">
-                <div id="total-progress" class="bg-blue-500 h-2.5 rounded-full progress-bar shadow-[0_0_12px_rgba(59,130,246,0.6)]" style="width: 0%"></div>
+
+            <!-- 2) 카테고리별 업무 완료도 요약 보드 -->
+            <div class="lg:col-span-1 bg-slate-900 p-6 md:p-8 rounded-[32px] shadow-xl text-white relative overflow-hidden flex flex-col h-full">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+                
+                <h2 class="text-[18px] md:text-[20px] font-black text-white tracking-tight flex items-center mb-6 relative z-10">
+                    <i class="fa-solid fa-chart-pie text-blue-400 mr-2.5 text-xl"></i>업무 완료도 보드
+                </h2>
+                
+                <!-- 총괄 프로그레스 -->
+                <div class="mb-6 relative z-10 bg-slate-800/80 p-5 rounded-[24px] border border-slate-700 shadow-inner flex justify-between items-center">
+                    <div>
+                        <span class="block text-[11px] font-bold text-slate-400 tracking-widest mb-1">OVERALL PROGRESS</span>
+                        <span class="text-4xl font-black text-white" id="total-progress-text">0%</span>
+                    </div>
+                    <div class="text-right flex flex-col items-end">
+                        <span class="block text-[11px] font-bold text-slate-400 mb-1">달성 수치</span>
+                        <span class="text-[16px] font-black text-blue-400 bg-slate-900 px-3 py-1 rounded-lg border border-slate-700" id="total-count-text">0/0</span>
+                    </div>
+                </div>
+
+                <!-- 분야별 프로그레스 바 영역 -->
+                <div id="category-progress-container" class="relative z-10 flex-1 flex flex-col justify-center space-y-4">
+                    <!-- 자바스크립트로 분야별 진행률 동적으로 렌더링됨 -->
+                </div>
             </div>
         </div>
 
-        <!-- 퀘스트 카드 컨테이너 -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-7 md:gap-10" id="dashboard-container"></div>
+        <!-- 🌟 메인: 전체 퀘스트 카드 컨테이너 -->
+        <h2 class="text-[20px] font-black text-slate-800 tracking-tight flex items-center mb-5 ml-2"><i class="fa-solid fa-list-ul text-slate-400 mr-2"></i>전체 과업 리스트</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-7 md:gap-8" id="dashboard-container"></div>
     </div>
 
-    <!-- 플로팅 알림창 -->
+    <!-- 플로팅 토스트 알림창 -->
     <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl text-[15px] font-bold shadow-2xl opacity-0 transition-opacity pointer-events-none z-50 flex items-center gap-3 whitespace-nowrap border border-slate-700"></div>
 
     <script>
-        // 선생님의 구글 시트 URL
+        // 선생님의 구글 앱스 스크립트 URL
         const MY_GAS_URL = "https://script.google.com/macros/s/AKfycbyR8S_78zrgHjrVhgQlMZazpDpoBw7NZZOq0vB7iB0yIrbqo_O5B34Ye3QqZmRP0Qxu/exec";
         localStorage.setItem('googleSheetApiUrl', MY_GAS_URL);
 
@@ -105,14 +132,14 @@
                         { text: '오산대 교무처 통화하여 자퇴(제적) 처리 확인', current: 0, target: 1, dueDate: getFutureDate(1) },
                         { text: '정부24 접속 후 오산대 제적증명서 PDF 발급', current: 0, target: 1, dueDate: getFutureDate(1) },
                         { text: '정부24 접속 후 오산대 성적증명서 PDF 발급', current: 0, target: 1, dueDate: getFutureDate(1) },
-                        { text: '국가평생교육진흥원 로그인 및 4년제 전공 변경 신청', current: 0, target: 1, dueDate: getFutureDate(3) },
+                        { text: '국가평생교육진흥원 4년제 전공 변경 신청', current: 0, target: 1, dueDate: getFutureDate(3) },
                         { text: '대기 중인 36학점 수수료 36,000원 결제', current: 0, target: 1, dueDate: getFutureDate(3) },
                         { text: '잔여 학점 통합하여 최종 102학점 서류 제출', current: 0, target: 1, dueDate: getFutureDate(7) }
                     ]},
                     { title: 'PM 이직 (육휴 보장 공공기관)', kpis: [
                         { text: '링크드인 프로필: 정부사업 핸들링 성과 3줄 작성', current: 0, target: 3, dueDate: getFutureDate(5) },
                         { text: '사람인/잡코리아 "산학협력단, 재단" 알림 검색 설정', current: 0, target: 1, dueDate: getFutureDate(7) },
-                        { text: '육아휴직 1년 보장되는 타겟 공공기관 공고 스크랩', current: 0, target: 5, dueDate: getFutureDate(10) },
+                        { text: '육아휴직 1년 보장 타겟 공공기관 공고 스크랩', current: 0, target: 5, dueDate: getFutureDate(10) },
                         { text: '타겟 기관 지원용 이력서/포트폴리오 PDF 추출', current: 0, target: 1, dueDate: getFutureDate(14) },
                         { text: '타겟 공공기관 입사지원(제출) 완료', current: 0, target: 2, dueDate: getFutureDate(21) }
                     ]}
@@ -122,38 +149,38 @@
                 title: '📉 C2. 리스크 방어 & 자산 관리', color: 'emerald', icon: 'fa-chart-line',
                 tasks: [
                     { title: 'KOSPI 인버스 기계적 매도 룰', kpis: [
-                        { text: '증권앱 접속: KOSPI 7150선 도달 시 알림(푸시) 설정', current: 0, target: 1, dueDate: getFutureDate(1) },
-                        { text: '[상승] KOSPI 7150 돌파 시 1765원 물량 100% 매도', current: 0, target: 1, dueDate: getFutureDate(2) },
+                        { text: '증권앱 접속: KOSPI 7150선 도달 시 알림 설정', current: 0, target: 1, dueDate: getFutureDate(1) },
+                        { text: '[상승] KOSPI 7150 돌파 시 1765원 전량 매도', current: 0, target: 1, dueDate: getFutureDate(2) },
                         { text: '[하락] KOSPI 6800 하락 시 50% 분할 매도', current: 0, target: 1, dueDate: getFutureDate(4) },
-                        { text: '매주 수요일 대출/롤오버 방어용 정기 분할 매도', current: 0, target: 4, dueDate: getFutureDate(30) }
+                        { text: '매주 수요일 롤오버 방어용 정기 분할 매도', current: 0, target: 4, dueDate: getFutureDate(30) }
                     ]},
                     { title: '현금흐름 통제 & 라이프 예산', kpis: [
-                        { text: '전월 카드/계좌 지출 내역(112만 원) 엑셀 다운로드', current: 0, target: 1, dueDate: getFutureDate(2) },
+                        { text: '전월 카드/계좌 지출 내역(112만 원) 엑셀 다운', current: 0, target: 1, dueDate: getFutureDate(2) },
                         { text: '전월 불필요한 누수 지출 항목 3가지 형광펜 체크', current: 0, target: 3, dueDate: getFutureDate(2) },
-                        { text: '차월 타이트한 예산안(90만 원) 항목별 엑셀 배분', current: 0, target: 1, dueDate: getFutureDate(4) },
+                        { text: '차월 타이트한 예산안(90만 원) 항목별 분배', current: 0, target: 1, dueDate: getFutureDate(4) },
                         { text: '차량/주택/주식/현금 자산 배분 비율 파이차트화', current: 0, target: 1, dueDate: getFutureDate(10) },
                         { text: '당근마켓, 중고나라 등 마이크로 인컴 1건 실행', current: 0, target: 1, dueDate: getFutureDate(20) }
                     ]}
                 ]
             },
             {
-                title: '🚀 C3. P2 앱 런칭 & P1 AI 사업', color: 'indigo', icon: 'fa-mobile-screen',
+                title: '🚀 C3. P2 앱 런칭 & P1 AI', color: 'indigo', icon: 'fa-mobile-screen',
                 tasks: [
                     { title: 'P2: 감정 분석 일기 앱 베타', kpis: [
                         { text: '[Q1 기쁨] 통통 튀는 오디오 스템 루프 제작', current: 0, target: 20, dueDate: getFutureDate(5) },
                         { text: '[Q2 분노] 빠르고 긴장감 있는 오디오 스템 제작', current: 0, target: 20, dueDate: getFutureDate(7) },
                         { text: '[Q3 슬픔] 첼로/느린 피아노 오디오 스템 제작', current: 0, target: 20, dueDate: getFutureDate(9) },
-                        { text: '[Q4 평온] 어쿠스틱/자연 앰비언스 오디오 스템 제작', current: 0, target: 20, dueDate: getFutureDate(11) },
-                        { text: '감정 전환 시 오디오 크로스페이드 로직 다이어그램', current: 0, target: 1, dueDate: getFutureDate(14) },
+                        { text: '[Q4 평온] 어쿠스틱 자연 앰비언스 오디오 제작', current: 0, target: 20, dueDate: getFutureDate(11) },
+                        { text: '감정 전환 오디오 크로스페이드 로직 다이어그램', current: 0, target: 1, dueDate: getFutureDate(14) },
                         { text: 'iOS TestFlight 앱 빌드 파일 업로드', current: 0, target: 1, dueDate: getFutureDate(21) },
-                        { text: '지인 3명에게 TestFlight 링크 발송 및 피드백 수집', current: 0, target: 3, dueDate: getFutureDate(25) }
+                        { text: '지인 3명에게 TestFlight 링크 발송 및 피드백', current: 0, target: 3, dueDate: getFutureDate(25) }
                     ]},
                     { title: 'P1: 국가 AI 과업 생태계', kpis: [
-                        { text: '위키하우 벤치마킹 AI 업무 스탠다드 목차 5개 텍스트화', current: 0, target: 5, dueDate: getFutureDate(10) },
-                        { text: 'AI 스탠다드 커뮤니티 Figma 와이어프레임 스케치', current: 0, target: 5, dueDate: getFutureDate(14) },
-                        { text: '국가 차원 AI 활용 연구 가설 프롬프트 1장 작성', current: 0, target: 1, dueDate: getFutureDate(18) },
+                        { text: '위키하우 벤치마킹 AI 스탠다드 목차 5개', current: 0, target: 5, dueDate: getFutureDate(10) },
+                        { text: 'AI 스탠다드 커뮤니티 Figma 와이어프레임', current: 0, target: 5, dueDate: getFutureDate(14) },
+                        { text: '국가 차원 AI 활용 연구 가설 프롬프트 1장', current: 0, target: 1, dueDate: getFutureDate(18) },
                         { text: 'AI 도서 출판용 챕터 1 샘플 강의안 작성', current: 0, target: 1, dueDate: getFutureDate(25) },
-                        { text: '키프리스(KIPRIS) AI 기술 특허 선행기술조사 캡처', current: 0, target: 3, dueDate: getFutureDate(30) }
+                        { text: '키프리스 AI 기술 특허 선행기술조사 캡처', current: 0, target: 3, dueDate: getFutureDate(30) }
                     ]}
                 ]
             },
@@ -162,18 +189,18 @@
                 tasks: [
                     { title: 'P3: 음악 파이프라인 정리', kpis: [
                         { text: '개인 앨범 "피네" 트랙 EQ/믹싱 밸런스 최종 수정', current: 0, target: 1, dueDate: getFutureDate(5) },
-                        { text: '"피네" 최종 마스터링 및 24bit WAV 파일 바운스', current: 0, target: 1, dueDate: getFutureDate(7) },
-                        { text: '비비아나킴 "메르헨" 앨범 피드백 텍스트 카톡 발송', current: 0, target: 1, dueDate: getFutureDate(4) },
+                        { text: '"피네" 최종 마스터링 및 24bit WAV 파일 추출', current: 0, target: 1, dueDate: getFutureDate(7) },
+                        { text: '비비아나킴 "메르헨" 앨범 피드백 카톡 발송', current: 0, target: 1, dueDate: getFutureDate(4) },
                         { text: 'AI 뮤직다이어리 윤경님 결과물 리뷰 노션 작성', current: 0, target: 1, dueDate: getFutureDate(6) },
-                        { text: '가요 프로듀싱 오프라인 레슨 출석 및 과제 수행', current: 0, target: 4, dueDate: getFutureDate(30) },
-                        { text: '유튜브 수면/ASMR 1시간 루프 영상 인코딩 및 업로드', current: 0, target: 2, dueDate: getFutureDate(14) }
+                        { text: '가요 프로듀싱 오프라인 레슨 출석 및 과제', current: 0, target: 4, dueDate: getFutureDate(30) },
+                        { text: '유튜브 수면/ASMR 1시간 루프 영상 업로드', current: 0, target: 2, dueDate: getFutureDate(14) }
                     ]},
                     { title: '3D 외주 & 브랜딩 (Selling Point)', kpis: [
-                        { text: '과거 3D 작업물 베스트 렌더링 스크린샷 5장 리사이징', current: 0, target: 5, dueDate: getFutureDate(7) },
-                        { text: 'Upwork/Fiverr 영문 프로필 ChatGPT 번역 및 세팅', current: 0, target: 2, dueDate: getFutureDate(10) },
-                        { text: '고객이 내 작업을 구매할 이유(Selling Point) 3문장 도출', current: 0, target: 3, dueDate: getFutureDate(12) },
-                        { text: '"제 4의 벽을 깨는 아티스트" 슬로건 인스타 프로필 적용', current: 0, target: 1, dueDate: getFutureDate(14) },
-                        { text: '인스타 데이트 쇼핑몰 / AI 카피 스터디 피드 기획', current: 0, target: 2, dueDate: getFutureDate(18) }
+                        { text: '과거 3D 작업물 베스트 렌더링 스크린샷 5장', current: 0, target: 5, dueDate: getFutureDate(7) },
+                        { text: 'Upwork/Fiverr 영문 프로필 ChatGPT 세팅', current: 0, target: 2, dueDate: getFutureDate(10) },
+                        { text: '고객이 내 작업을 구매할 이유(Selling Point) 3문장', current: 0, target: 3, dueDate: getFutureDate(12) },
+                        { text: '"제 4의 벽을 깨는 아티스트" 슬로건 인스타 적용', current: 0, target: 1, dueDate: getFutureDate(14) },
+                        { text: '데이트 쇼핑몰 / AI 카피 스터디 인스타 피드 기획', current: 0, target: 2, dueDate: getFutureDate(18) }
                     ]}
                 ]
             },
@@ -181,7 +208,7 @@
                 title: '❤️ C5. 미국 일정 & 기념일', color: 'rose', icon: 'fa-plane',
                 tasks: [
                     { title: '기념일 이벤트 및 선물 결제', kpis: [
-                        { text: '1주년 기억 여행 데이트 코스 타임테이블 카톡 브리핑', current: 0, target: 1, dueDate: '2024-10-18' },
+                        { text: '1주년 기억 여행 데이트 타임테이블 카톡 발송', current: 0, target: 1, dueDate: '2024-10-18' },
                         { text: '1주년 예약한 맞춤 꽃다발 픽업 및 전달', current: 0, target: 1, dueDate: '2024-10-22' },
                         { text: '여자친구 생일 노원 스시 코스 예약 전화 완료', current: 0, target: 1, dueDate: '2024-10-25' },
                         { text: '생일 선물(에어팟) 구매 및 축하 손편지 쓰기', current: 0, target: 2, dueDate: '2024-10-29' },
@@ -191,20 +218,20 @@
                         { text: '스카프 무늬에 맞춘 자개 손거울 결제', current: 0, target: 1, dueDate: getFutureDate(12) }
                     ]},
                     { title: '미국 루틴 & 여행 퀘스트', kpis: [
-                        { text: '12/24 시카고 9인 외식 Maggiano\'s 오픈테이블 예약', current: 0, target: 1, dueDate: getFutureDate(15) },
-                        { text: '시카고 H마트 샤브샤브 고기/부르스타 쇼핑 리스트 메모', current: 0, target: 1, dueDate: getFutureDate(20) },
+                        { text: '12/24 시카고 9인 외식 Maggiano\'s 예약', current: 0, target: 1, dueDate: getFutureDate(15) },
+                        { text: '시카고 H마트 샤브샤브 부르스타 쇼핑 메모', current: 0, target: 1, dueDate: getFutureDate(20) },
                         { text: '2주간 사용할 한국 데이트 비용 총 예산 계산', current: 0, target: 1, dueDate: getFutureDate(3) },
-                        { text: '미국 14일 체류 시 샘과 함께 유지할 타임블록 설계', current: 0, target: 1, dueDate: getFutureDate(25) },
+                        { text: '미국 14일 체류 시 샘과 유지할 타임블록 설계', current: 0, target: 1, dueDate: getFutureDate(25) },
                         { text: '버스 등 자투리 시간 활용 틈틈이 스트레칭 하기', current: 0, target: 14, dueDate: getFutureDate(14) }
                     ]}
                 ]
             }
         ];
 
-        let appData = JSON.parse(localStorage.getItem('myPmoDataV5')) || initialData;
+        let appData = JSON.parse(localStorage.getItem('myPmoDataV6')) || initialData;
         let isHideCompleted = false;
 
-        // 고유 ID 
+        // 고유 ID 세팅
         appData.forEach(c => c.tasks.forEach(t => t.kpis.forEach(k => { 
             if(!k.id) k.id = 'kpi_' + Math.random().toString(36).substr(2,9);
             if(k.current === undefined) k.current = 0;
@@ -223,8 +250,8 @@
             showToast('동기화 중입니다...', 'fa-spinner fa-spin');
             try { 
                 await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(appData) }); 
-                showToast('클라우드에 안전하게 업데이트되었습니다!'); 
-            } catch(e) { showToast('저장 실패', 'fa-xmark'); }
+                showToast('클라우드 저장 완료!'); 
+            } catch(e) { showToast('저장 실패: 네트워크 확인', 'fa-xmark'); }
         }
 
         function toggleHide() { 
@@ -232,34 +259,56 @@
             render(); 
         }
 
-        // 수치 컨트롤
+        // 수치 컨트롤 
         function updateKpi(cIdx, tIdx, kIdx, amount) {
             let kpi = appData[cIdx].tasks[tIdx].kpis.find(k => k.id === kIdx);
             if(kpi) {
                 kpi.current = Math.max(0, Math.min(kpi.target, kpi.current + amount));
-                localStorage.setItem('myPmoDataV5', JSON.stringify(appData));
+                localStorage.setItem('myPmoDataV6', JSON.stringify(appData));
                 render();
             }
         }
 
-        // 🌟 달력 인풋 체인지 함수
+        // 마감일 변경
         function changeDueDate(cIdx, tIdx, kIdx, newDate) {
             let kpi = appData[cIdx].tasks[tIdx].kpis.find(k => k.id === kIdx);
             if(kpi && newDate) {
                 kpi.dueDate = newDate;
-                localStorage.setItem('myPmoDataV5', JSON.stringify(appData));
+                localStorage.setItem('myPmoDataV6', JSON.stringify(appData));
                 render();
                 showToast('마감일이 변경되어 재정렬되었습니다!', 'fa-calendar-check');
             }
         }
 
-        // 텍스트 내 숫자 강조
+        // 텍스트 내 숫자 파란색 굵게 하이라이트
         function formatText(text) {
             return text.replace(/([0-9,]+(?:건|개|명|장|회|%|곳|종|원|학점|시간|일|문장|부|곡|줄)?)/g, '<span class="num-highlight">$1</span>');
         }
 
-        // 🌟 클릭하면 달력이 뜨는 마법의 뱃지 UI
-        function getDdayBadge(dateString, isDone, cIdx, tIdx, kId) {
+        // 컨트롤 버튼 생성 헬퍼
+        function getControlBtn(kpi, isDone, cIdx, tIdx, size = 'normal') {
+            if(kpi.target === 1) {
+                let btnCls = size === 'small' ? 'w-8 h-8 rounded-xl' : 'w-10 h-10 rounded-[14px]';
+                let iconCls = size === 'small' ? 'text-[14px]' : 'text-[20px]';
+                return `
+                    <div class="${btnCls} flex items-center justify-center cursor-pointer transition-all shadow-sm border-[2px] ${isDone ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-300 hover:border-slate-400'}" onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${isDone ? -1 : 1})">
+                        <i class="fa-solid fa-check text-white ${iconCls} transition-transform ${isDone ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}"></i>
+                    </div>`;
+            } else {
+                let pCls = size === 'small' ? 'p-1 rounded-xl' : 'p-1.5 rounded-2xl';
+                let btnCls = size === 'small' ? 'w-7 h-7 rounded-lg' : 'w-8 h-8 rounded-xl';
+                let textCls = size === 'small' ? 'w-10 text-[13px]' : 'w-12 text-[14px]';
+                return `
+                    <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 shadow-sm no-select ${pCls}">
+                        <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', -1)" class="${btnCls} bg-white hover:bg-slate-200 text-slate-500 shadow-sm flex items-center justify-center active:scale-95 transition-all"><i class="fa-solid fa-minus text-[11px]"></i></button>
+                        <span class="font-black text-slate-800 text-center tracking-tighter ${textCls}">${kpi.current}<span class="text-slate-400 font-normal mx-0.5">/</span>${kpi.target}</span>
+                        <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${kpi.target >= 20 ? 5 : 1})" class="${btnCls} bg-slate-800 hover:bg-slate-700 text-white shadow-sm flex items-center justify-center active:scale-95 transition-all"><i class="fa-solid fa-plus text-[11px]"></i></button>
+                    </div>`;
+            }
+        }
+
+        // 달력 뱃지 생성 헬퍼
+        function getDdayBadge(dateString, isDone, cIdx, tIdx, kId, style = 'normal') {
             if(isDone) return '<span class="text-slate-400 text-[12px] font-bold bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 mt-2.5 inline-flex items-center"><i class="fa-solid fa-check mr-1.5"></i>완료됨</span>';
             
             const today = new Date(); today.setHours(0,0,0,0);
@@ -271,30 +320,39 @@
             let icon = '<i class="fa-regular fa-calendar text-slate-500"></i>';
             
             if (diffDays < 0) { 
-                cls = 'text-red-700 bg-red-50 border-red-200'; label = `기한 초과 D+${Math.abs(diffDays)}`; icon = '<i class="fa-solid fa-triangle-exclamation text-red-500"></i>';
+                cls = 'text-red-700 bg-red-50 border-red-200'; label = `초과 D+${Math.abs(diffDays)}`; icon = '<i class="fa-solid fa-triangle-exclamation text-red-500"></i>';
             } else if (diffDays === 0) { 
                 cls = 'text-white bg-red-500 border-red-600 shadow-md animate-pulse'; label = '오늘 마감!'; icon = '<i class="fa-solid fa-fire text-white"></i>';
             } else if (diffDays <= 3) { 
                 cls = 'text-orange-700 bg-orange-50 border-orange-200'; icon = '<i class="fa-regular fa-clock text-orange-500"></i>';
             }
-            
+
             const mm = String(due.getMonth()+1).padStart(2,'0');
             const dd = String(due.getDate()).padStart(2,'0');
+            
+            let wrapCls = style === 'compact' ? 'mt-1.5 px-2 py-0.5 rounded-lg' : 'mt-3.5 px-3 py-1.5 rounded-xl';
+            let txtCls = style === 'compact' ? 'text-[11px]' : 'text-[13px]';
 
             return `
-                <div class="relative inline-flex items-center gap-2 mt-3.5 cursor-pointer group border ${cls} px-3 py-1.5 rounded-xl transition-colors shadow-sm">
-                    <span class="text-[13px] font-black flex items-center gap-1.5 pointer-events-none">${icon}${label}</span>
+                <div class="relative inline-flex items-center gap-2 cursor-pointer group border transition-colors shadow-sm ${cls} ${wrapCls}">
+                    <span class="${txtCls} font-black flex items-center gap-1.5 pointer-events-none">${icon}${label}</span>
                     <div class="h-3 w-[1.5px] bg-current opacity-20 pointer-events-none mx-0.5"></div>
-                    <!-- 🔥 투명 캘린더 인풋 -->
                     <input type="date" value="${dateString}" onchange="changeDueDate(${cIdx}, ${tIdx}, '${kId}', this.value)" class="date-input-overlay">
-                    <span class="text-[12px] font-bold opacity-80 pointer-events-none flex items-center">${mm}/${dd} <i class="fa-solid fa-pen text-[10px] ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity"></i></span>
+                    <span class="text-[12px] font-bold opacity-80 pointer-events-none flex items-center">${mm}/${dd}</span>
                 </div>`;
         }
 
+        // 🌟 전체 렌더링 로직
         function render() {
             const grid = document.getElementById('dashboard-container');
-            grid.innerHTML = '';
+            const progressPanel = document.getElementById('category-progress-container');
+            const urgentPanel = document.getElementById('urgent-tasks-container');
+            
+            grid.innerHTML = ''; progressPanel.innerHTML = ''; urgentPanel.innerHTML = '';
+            
             let totalCurrent = 0, totalTarget = 0;
+            let urgentTasks = [];
+            const today = new Date(); today.setHours(0,0,0,0);
 
             appData.forEach((cat, cIdx) => {
                 let catCurrent = 0, catTarget = 0;
@@ -302,10 +360,9 @@
                 let hasVisibleTask = false;
 
                 cat.tasks.forEach((task, tIdx) => {
-                    let kpisHtml = '';
-                    let visibleCount = 0;
+                    let kpisHtml = ''; let visibleCount = 0;
 
-                    // 🌟 마감일이 급한 퀘스트부터 위로 자동 정렬
+                    // 마감일 기준 정렬
                     let sortedKpis = [...task.kpis].sort((a, b) => {
                         const aDone = a.current >= a.target; const bDone = b.current >= b.target;
                         if(aDone !== bDone) return aDone ? 1 : -1; 
@@ -317,34 +374,25 @@
                         catCurrent += kpi.current; totalCurrent += kpi.current;
                         
                         let isDone = kpi.current >= kpi.target;
+                        
+                        // 🚨 1. D-7 이내 임박 퀘스트만 추출 (미완료건만)
+                        if(!isDone) {
+                            const diffDays = Math.ceil((new Date(kpi.dueDate) - today) / (1000 * 60 * 60 * 24));
+                            if(diffDays <= 7) {
+                                urgentTasks.push({ kpi, cIdx, tIdx, diffDays, cat });
+                            }
+                        }
+
                         if(isHideCompleted && isDone) return;
                         visibleCount++;
 
-                        // 컨트롤 버튼
-                        let controlHtml = '';
-                        if(kpi.target === 1) {
-                            controlHtml = `
-                                <div class="w-10 h-10 rounded-[14px] flex items-center justify-center cursor-pointer transition-all shadow-sm border-[2px] ${isDone ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-300 hover:border-slate-400'}" onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${isDone ? -1 : 1})">
-                                    <i class="fa-solid fa-check text-white text-[20px] transition-transform ${isDone ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}"></i>
-                                </div>`;
-                        } else {
-                            controlHtml = `
-                                <div class="flex items-center gap-1.5 bg-slate-50 rounded-2xl p-1.5 border border-slate-200 shadow-sm no-select">
-                                    <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', -1)" class="w-8 h-8 rounded-xl bg-white hover:bg-slate-200 text-slate-500 shadow-sm flex items-center justify-center active:scale-95 transition-all"><i class="fa-solid fa-minus text-[13px]"></i></button>
-                                    <span class="text-[14px] font-black text-slate-800 w-12 text-center tracking-tighter">${kpi.current}<span class="text-slate-400 font-normal mx-0.5">/</span>${kpi.target}</span>
-                                    <button onclick="updateKpi(${cIdx}, ${tIdx}, '${kpi.id}', ${kpi.target >= 20 ? 5 : 1})" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-white shadow-sm flex items-center justify-center active:scale-95 transition-all"><i class="fa-solid fa-plus text-[13px]"></i></button>
-                                </div>`;
-                        }
-
-                        // 🌟 가시성을 극대화한 넓은 여백의 하얀색 카드(Card) 
+                        // 메인 리스트 카드 렌더링
                         kpisHtml += `
-                            <div class="task-card flex flex-col p-5 mb-4 rounded-3xl bg-white border border-slate-200/80 shadow-sm ${isDone ? 'opacity-50 grayscale bg-slate-50' : ''}">
-                                <div class="flex items-start gap-4 w-full">
-                                    <div class="shrink-0 mt-0.5">${controlHtml}</div>
-                                    <div class="flex-1 min-w-0 pt-0.5">
-                                        <div class="text-[16px] md:text-[17px] leading-snug break-keep ${isDone ? 'text-slate-400 line-through' : 'text-slate-900 font-bold'}">${isDone ? kpi.text : formatText(kpi.text)}</div>
-                                        ${getDdayBadge(kpi.dueDate, isDone, cIdx, tIdx, kpi.id)}
-                                    </div>
+                            <div class="task-card flex flex-col sm:flex-row items-start gap-4 p-5 mb-4 rounded-3xl bg-white border border-slate-200/80 shadow-sm ${isDone ? 'opacity-50 grayscale bg-slate-50' : ''}">
+                                <div class="shrink-0 mt-0.5">${getControlBtn(kpi, isDone, cIdx, tIdx, 'normal')}</div>
+                                <div class="flex-1 min-w-0 w-full">
+                                    <div class="text-[16px] md:text-[17px] leading-snug break-keep ${isDone ? 'text-slate-400 line-through' : 'text-slate-900 font-bold'}">${isDone ? kpi.text : formatText(kpi.text)}</div>
+                                    ${getDdayBadge(kpi.dueDate, isDone, cIdx, tIdx, kpi.id, 'normal')}
                                 </div>
                             </div>
                         `;
@@ -363,6 +411,20 @@
 
                 let catPercent = catTarget === 0 ? 0 : Math.floor((catCurrent / catTarget) * 100);
 
+                // 📊 2. 프로젝트 진척률(Progress) 브리핑 패널 렌더링
+                let shortTitle = cat.title.split(' ').slice(1).join(' ');
+                progressPanel.innerHTML += `
+                    <div class="bg-slate-800/40 p-3.5 rounded-2xl border border-slate-700/50">
+                        <div class="flex justify-between items-end mb-2.5 px-1">
+                            <span class="text-[13px] font-bold text-slate-300 flex items-center"><i class="fa-solid ${cat.icon} text-${cat.color}-400 mr-2 w-4 text-center"></i>${shortTitle}</span>
+                            <span class="text-[14px] font-black text-white">${catPercent}%</span>
+                        </div>
+                        <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                            <div class="bg-${cat.color}-500 h-2 rounded-full progress-bar" style="width: ${catPercent}%"></div>
+                        </div>
+                    </div>
+                `;
+
                 if(isHideCompleted && !hasVisibleTask) {
                     tasksHtml = `<div class="flex flex-col items-center justify-center py-24 text-slate-300"><i class="fa-solid fa-clipboard-check text-6xl text-${cat.color}-400/50 mb-5"></i><p class="font-bold text-[16px] text-slate-400">모든 퀘스트 클리어!</p></div>`;
                 }
@@ -370,15 +432,38 @@
                 grid.innerHTML += `
                     <div class="bg-white rounded-[36px] border border-slate-200 overflow-hidden flex flex-col h-full shadow-sm">
                         <div class="px-7 md:px-8 py-6 flex justify-between items-center relative border-b border-slate-100">
-                            <h2 class="text-[20px] font-black text-slate-900 tracking-tight flex items-center"><i class="fa-solid ${cat.icon} text-${cat.color}-500 w-8 mr-1.5 text-xl"></i>${cat.title}</h2>
-                            <span class="text-[14px] font-black bg-slate-100 px-3.5 py-1.5 rounded-xl text-slate-700">${catPercent}%</span>
+                            <h2 class="text-[20px] font-black text-slate-900 tracking-tight flex items-center truncate"><i class="fa-solid ${cat.icon} text-${cat.color}-500 w-8 mr-1.5 text-xl"></i>${cat.title.split(' ')[0]} ${shortTitle}</h2>
                         </div>
                         <div class="w-full bg-slate-100 h-2"><div class="bg-${cat.color}-500 h-2 progress-bar shadow-sm" style="width: ${catPercent}%"></div></div>
-                        <div class="px-3 md:px-6 pt-6 pb-8 flex-1">${tasksHtml}</div>
+                        <div class="px-4 md:px-6 pt-6 pb-8 flex-1">${tasksHtml}</div>
                     </div>
                 `;
             });
 
+            // 🚨 3. 마감 임박 (D-7 이내) 리스트 렌더링
+            urgentTasks.sort((a, b) => a.diffDays - b.diffDays); // 가장 급한 날짜순으로 정렬
+            document.getElementById('urgent-count').innerText = `${urgentTasks.length}건 대기중`;
+            
+            if(urgentTasks.length === 0) {
+                urgentPanel.innerHTML = `<div class="flex flex-col items-center justify-center h-full min-h-[180px] text-slate-400"><i class="fa-solid fa-mug-hot text-4xl mb-4 text-red-200"></i><p class="font-bold text-sm">일주일 내로 마감할 퀘스트가 없습니다!<br>여유를 즐기세요.</p></div>`;
+            } else {
+                urgentTasks.forEach(item => {
+                    urgentPanel.innerHTML += `
+                        <div class="flex items-center gap-3.5 bg-red-50/40 p-4 rounded-2xl border border-red-100 hover:bg-red-50 hover:border-red-200 transition-colors">
+                            <div class="shrink-0">${getControlBtn(item.kpi, false, item.cIdx, item.tIdx, 'small')}</div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[15px] font-bold text-slate-900 leading-snug break-keep">${formatText(item.kpi.text)}</div>
+                                <div class="flex flex-wrap items-center gap-2 mt-2">
+                                    ${getDdayBadge(item.kpi.dueDate, false, item.cIdx, item.tIdx, item.kpi.id, 'compact')}
+                                    <span class="text-[11px] font-bold text-slate-500 mt-1.5 flex items-center bg-white px-2 py-1 rounded-md border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-${item.cat.color}-400 mr-1.5"></span>${item.cat.title.split(' ')[1]}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // 총괄 요약 업데이트
             let overall = totalTarget === 0 ? 0 : Math.floor((totalCurrent / totalTarget) * 100);
             document.getElementById('total-progress-text').innerText = `${overall}%`;
             document.getElementById('total-count-text').innerText = `${totalCurrent} / ${totalTarget}`;
